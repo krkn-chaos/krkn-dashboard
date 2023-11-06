@@ -1,0 +1,99 @@
+.overview-wrapper {
+  height: 100%;
+  .overview-card {
+    height: 100%;
+    display: flex;
+   // justify-content: center;
+  }
+  .cluster-wrapper {
+    display: flex;
+    justify-content: space-evenly;
+    .title {
+      padding-bottom: 10px;
+    }
+    .cerberus-logo {
+      height: 10vh;
+      width: 10vh;
+    }
+  }
+  .kraken-wrapper {
+    // display: flex;
+    // justify-content: space-evenly;
+    .title {
+      padding-bottom: 10px;
+    }
+    .kraken-logo {
+      height: 6vh;
+      width: 6vh;
+    }
+  }
+  .margin-bottom {
+    margin-bottom: 3vh;
+  }
+  
+}
+
+.new-kraken-modal {
+  ::-webkit-scrollbar {
+    width: 7px;
+  }
+  ::-webkit-scrollbar-track {
+    background-color: #bdbaba;
+    border-radius: 20px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #7c8183;
+    border-radius: 20px;
+    background-clip: content-box;
+  }
+}
+
+
+  .status-card-wrapper {
+    height: 100%;
+    display: flex;
+    justify-content: end;
+    padding-bottom: 2vh;
+    .status-card {
+      text-align: center;
+      svg {
+        height: 3vh;
+        width: 3vh;
+      }
+      .passClass {
+        svg {
+          fill: #71F5E8;
+        }
+      }
+      .failClass {
+        svg {
+          fill: #F67280;
+        }
+      }
+    }
+  }
+
+
+// .kraken-card {
+//   width: 25%;
+//   align-items: center;
+// }
+
+// .top-bar {
+//   display: flex;
+//   justify-content: space-between;
+// }
+
+.status-card.passClass {
+  border-top: 3px solid #71F5E8;
+}
+.status-card.failClass {
+  border-top: 3px solid #F67280;
+}
+
+.details-card {
+  margin-top: 4vh;
+}
+.pf-c-accordion__toggle:focus {
+  outline: 0;
+}
