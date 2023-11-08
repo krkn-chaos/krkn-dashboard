@@ -116,3 +116,10 @@ export const checkForRootPassword = (isOpen) => (dispatch) => {
     dispatch({ type: TYPES.TOGGLE_ROOT_MODAL, payload: isOpen });
   }
 };
+
+export const checkPodmanInstalled = () => async (dispatch) => {
+  const response = await API.get("/getPodmanStatus");
+  if (response.data.status === "success") {
+    dispatch({ type: TYPES.GET_PODMAN_STATUS, payload: true });
+  }
+};

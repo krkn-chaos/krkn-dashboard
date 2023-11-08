@@ -115,6 +115,20 @@ app.get("/removePod", (req, res) => {
   });
 });
 
+app.get("/getPodmanStatus", (req, res) => {
+  const command = `podman -v`;
+  child_process.exec(command, (err, stdout, stderr) => {
+    if (stdout) {
+      const version = stdout.split(" ")[2];
+      const hasVersion = !!Number(version?.split(".").join(""));
+      res.json({ message: hasVersion, status: "success" });
+    }
+    if (stderr || err) {
+      res.json({ message: stderr, status: "failed" });
+    }
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
 });

@@ -33,7 +33,9 @@ const Overview = () => {
 
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [isChecked, setIsChecked] = useState(true);
-  const { pod_status } = useSelector((state) => state.experiment);
+  const { pod_status, isPodmanInstalled } = useSelector(
+    (state) => state.experiment
+  );
 
   const handleTabClick = (event, tabIndex) => {
     setActiveTabKey(tabIndex);
@@ -54,9 +56,11 @@ const Overview = () => {
   );
 
   useEffect(() => {
-    dispatch(checkForRootPassword(false));
-    dispatch(getPodDetails());
-  }, [dispatch]);
+    if (isPodmanInstalled) {
+      dispatch(checkForRootPassword(false));
+      dispatch(getPodDetails());
+    }
+  }, [dispatch, isPodmanInstalled]);
 
   return (
     <div className="overview-wrapper">
@@ -73,13 +77,13 @@ const Overview = () => {
                     Pod Details
                   </Title>
                   <div className="status-card-wrapper">
-                    {/* <Switch
+                    <Switch
                       id="auto-update"
                       label="Auto Update"
                       isChecked={isChecked}
                       onChange={handleSwitchChange}
                       ouiaId="Auto update switch"
-                    /> */}
+                    />
                     {!pod_status && (
                       <IconButton
                         variant="link"

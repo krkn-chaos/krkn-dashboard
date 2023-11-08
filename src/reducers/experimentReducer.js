@@ -9,6 +9,7 @@ const initialState = {
   scenarioChecked: "pod-scenarios",
   isRootModalOpen: false,
   namsespaces: [],
+  isPodmanInstalled: false,
 };
 
 const experimentReducer = (state = initialState, action) => {
@@ -34,6 +35,8 @@ const experimentReducer = (state = initialState, action) => {
         ...state,
         namsespaces: action.payload,
       };
+    case TYPES.GET_PODMAN_STATUS:
+      return { ...state, isPodmanInstalled: action.payload };
     default:
       return state;
   }
