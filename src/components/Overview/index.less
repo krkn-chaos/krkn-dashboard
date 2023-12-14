@@ -3,7 +3,7 @@
   .overview-card {
     height: 100%;
     display: flex;
-   // justify-content: center;
+    // justify-content: center;
   }
   .cluster-wrapper {
     display: flex;
@@ -30,7 +30,6 @@
   .margin-bottom {
     margin-bottom: 3vh;
   }
-  
 }
 
 .new-kraken-modal {
@@ -48,31 +47,21 @@
   }
 }
 
-
-  .status-card-wrapper {
-    height: 100%;
-    display: flex;
-    justify-content: end;
-    padding-bottom: 2vh;
-    .status-card {
-      text-align: center;
-      svg {
-        height: 3vh;
-        width: 3vh;
-      }
-      .passClass {
-        svg {
-          fill: #71F5E8;
-        }
-      }
-      .failClass {
-        svg {
-          fill: #F67280;
-        }
-      }
+.pod-status-class {
+  .passClass {
+    svg {
+      fill: #71f5e8;
     }
   }
-
+  .icon-class {
+    padding-right: 0.5vw;
+  }
+  .failClass {
+    svg {
+      fill: #f67280;
+    }
+  }
+}
 
 // .kraken-card {
 //   width: 25%;
@@ -85,10 +74,10 @@
 // }
 
 .status-card.passClass {
-  border-top: 3px solid #71F5E8;
+  border-top: 3px solid #71f5e8;
 }
 .status-card.failClass {
-  border-top: 3px solid #F67280;
+  border-top: 3px solid #f67280;
 }
 
 .details-card {

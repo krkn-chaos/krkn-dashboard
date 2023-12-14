@@ -1,8 +1,8 @@
 import "./index.less";
 
-// import { Card, CardBody } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 
+import PODStatus from "@/components/Overview/PODStatus";
 import React from "react";
 import { SyncAltIcon } from "@patternfly/react-icons";
 import { useSelector } from "react-redux";
@@ -17,11 +17,11 @@ const DetailsTable = () => {
     name: "Name",
     mount: "Mounts",
     state: "State",
+    status: "Status",
   };
   return (
     <>
       {podDetails && (
-        // <Card className="details-card">
         <div className="details-card-body">
           <Table>
             <Thead>
@@ -32,6 +32,7 @@ const DetailsTable = () => {
                 <Th width={10}>{columnNames.name}</Th>
                 <Th width={10}>{columnNames.mount}</Th>
                 <Th width={10}>{columnNames.state}</Th>
+                <Th width={10}>{columnNames.status}</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -50,11 +51,17 @@ const DetailsTable = () => {
                     podDetails.State
                   )}
                 </Td>
+                <Td>
+                  {podDetails.State === "running" ? (
+                    <div className="dot-flashing"></div>
+                  ) : (
+                    <PODStatus pod_status={podDetails.ExitCode} />
+                  )}
+                </Td>
               </Tr>
             </Tbody>
           </Table>
         </div>
-        // </Card>
       )}
     </>
   );

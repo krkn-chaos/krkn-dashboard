@@ -27,6 +27,8 @@
     "redux-devtools-extension": "^2.13.9",
     "redux-logger": "^3.0.6",
     "redux-thunk": "^2.4.2",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.7.2",
     "universal-cookie": "^6.1.0"
   },
   "devDependencies": {

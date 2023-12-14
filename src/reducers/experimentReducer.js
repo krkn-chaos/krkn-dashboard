@@ -4,12 +4,12 @@ const initialState = {
   container_id: "",
   pod_status: null,
   logs: "",
-  errorLogs: "",
   podDetails: null,
   scenarioChecked: "pod-scenarios",
   isRootModalOpen: false,
   namsespaces: [],
   isPodmanInstalled: false,
+  socketInstance: null,
 };
 
 const experimentReducer = (state = initialState, action) => {
@@ -21,9 +21,10 @@ const experimentReducer = (state = initialState, action) => {
     case TYPES.SET_LOGS:
       return {
         ...state,
-        logs: action.payload.logs,
-        errorLogs: action.payload.errorLogs,
+        logs: state.logs.concat(action.payload.logs),
       };
+    case TYPES.EMPTY_LOGS:
+      return { ...state, logs: "" };
     case TYPES.SET_POD_DETAILS:
       return { ...state, podDetails: action.payload };
     case TYPES.CHECK_SCENARIO:
@@ -37,6 +38,8 @@ const experimentReducer = (state = initialState, action) => {
       };
     case TYPES.GET_PODMAN_STATUS:
       return { ...state, isPodmanInstalled: action.payload };
+    case TYPES.SET_SOCKET_INSTANCE:
+      return { ...state, socketInstance: action.payload };
     default:
       return state;
   }

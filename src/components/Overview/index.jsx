@@ -3,7 +3,6 @@ import "./index.less";
 import {
   Card,
   CardBody,
-  Switch,
   Tab,
   TabTitleText,
   Tabs,
@@ -12,54 +11,61 @@ import {
 import React, { useEffect, useState } from "react";
 import {
   checkForRootPassword,
+  emptyLogs,
   getLogs,
   getPodDetails,
-  getPodStatus,
+  setSocketInstance,
 } from "@/actions/newExperiment";
 import { useDispatch, useSelector } from "react-redux";
 
+import Cookies from "universal-cookie";
 import DetailsTable from "../template/DetailsTable";
-import { IconButton } from "@/components/atoms/Buttons/Buttons";
 import LogsUI from "./LogsUI";
 import NewExperiment from "@/components/NewExperiment";
-import { OutlinedCompassIcon } from "@patternfly/react-icons";
-import PODStatus from "./PODStatus";
 import RootPasswordModal from "@/components/molecules/PasswordModal";
 import ScenariosCard from "@/components/template/ScenariosCard";
-import { useInterval } from "@/utils/hooks";
+import socketIOClient from "socket.io-client";
 
 const Overview = () => {
   const dispatch = useDispatch();
 
   const [activeTabKey, setActiveTabKey] = useState(0);
-  const [isChecked, setIsChecked] = useState(true);
-  const { pod_status, isPodmanInstalled } = useSelector(
-    (state) => state.experiment
-  );
 
-  const handleTabClick = (event, tabIndex) => {
+  const [socket, setSocket] = useState(null);
+
+  const { isPodmanInstalled } = useSelector((state) => state.experiment);
+
+  const cookies = new Cookies(null, { path: "/" });
+  const passwd = cookies.get("root-password");
+
+  const handleTabClick = (_event, tabIndex) => {
     setActiveTabKey(tabIndex);
     if (tabIndex === 1) {
-      dispatch(getLogs());
+      dispatch(emptyLogs());
+      socket.emit("logs", passwd);
+      socket.on("logs", (data) => {
+        dispatch(getLogs(data));
+      });
     }
   };
-  const handleSwitchChange = (checked) => {
-    setIsChecked(checked);
-  };
-
-  useInterval(
-    () => {
-      dispatch(getPodDetails());
-      dispatch(getPodStatus());
-    },
-    isChecked ? 6000 : null
-  );
-
   useEffect(() => {
+    const socketInstance = socketIOClient("http://localhost:8000", {
+      extraHeaders: {
+        passwd: passwd,
+      },
+    });
+    setSocket(socketInstance);
+    dispatch(setSocketInstance(socketInstance));
+
     if (isPodmanInstalled) {
       dispatch(checkForRootPassword(false));
       dispatch(getPodDetails());
     }
+    return () => {
+      if (socketInstance) {
+        socketInstance.disconnect();
+      }
+    };
   }, [dispatch, isPodmanInstalled]);
 
   return (
@@ -76,25 +82,7 @@ const Overview = () => {
                   <Title headingLevel="h3" className="title-text">
                     Pod Details
                   </Title>
-                  <div className="status-card-wrapper">
-                    <Switch
-                      id="auto-update"
-                      label="Auto Update"
-                      isChecked={isChecked}
-                      onChange={handleSwitchChange}
-                      ouiaId="Auto update switch"
-                    />
-                    {!pod_status && (
-                      <IconButton
-                        variant="link"
-                        icon={<OutlinedCompassIcon />}
-                        text={" Get Status"}
-                        position={"right"}
-                        clickHandler={() => dispatch(getPodStatus())}
-                      />
-                    )}
-                    <PODStatus />
-                  </div>
+
                   <DetailsTable />
                 </CardBody>
               </Card>

@@ -2,6 +2,7 @@
 
 import "dotenv/config";
 
+import { Server } from "socket.io";
 import child_process from "child_process";
 import cors from "cors";
 import express from "express";
@@ -64,17 +65,6 @@ app.get("/getPodStatus", (req, res) => {
   });
 });
 
-app.get("/getLogs", (req, res) => {
-  const passwd = req.headers?.authorization?.split(" ")[1];
-
-  const command = `echo '${passwd}' | sudo -S podman logs -f ui`;
-  child_process.exec(command, (err, stdout, stderr) => {
-    const logs = stdout.toString().replace(/\n/g, "<br />");
-    const errorLogs = stderr?.toString().replace(/\n/g, "<br />");
-    res.json({ message: logs, errorLog: errorLogs });
-  });
-});
-
 app.get("/getPodDetails", (req, res) => {
   const passwd = req.headers?.authorization?.split(" ")[1];
   const command = `echo '${passwd}' | sudo -S podman ps -a --format=json`;
@@ -129,6 +119,38 @@ app.get("/getPodmanStatus", (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
+});
+
+const io = new Server(server, { cors: { origin: "*" } });
+
+io.on("connection", (socket) => {
+  console.log("Connection established");
+  const passwd = socket.handshake.headers.passwd;
+
+  socket.on("disconnect", () => {
+    console.log("Disconnected");
+  });
+
+  socket.on("logs", (passwd) => {
+    const command = `echo '${passwd}' | sudo -S podman logs -f ui`;
+    const ls = child_process.exec(command);
+    ls.stdout.on("data", (data) => {
+      socket.emit("logs", data);
+    });
+    ls.stderr.on("data", (data) => {
+      socket.emit("logs", data);
+    });
+  });
+  socket.on("podStatus", () => {
+    const command = `echo '${passwd}' | sudo -S podman ps -a --format=json`;
+    const ls = child_process.exec(command);
+    ls.stdout.on("data", (data) => {
+      socket.emit("podStatus", JSON.parse(data));
+    });
+    ls.stderr.on("data", (data) => {
+      socket.emit("podStatus", JSON.parse(data));
+    });
+  });
 });
