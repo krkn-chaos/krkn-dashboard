@@ -1,7 +1,5 @@
 // server/index.js
 
-import "dotenv/config";
-
 import { Server } from "socket.io";
 import child_process from "child_process";
 import cors from "cors";
