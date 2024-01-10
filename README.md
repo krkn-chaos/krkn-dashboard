@@ -42,6 +42,7 @@ If the Kubernetes cluster has not been deployed, refer to the links below to com
 - [minikube](https://minikube.sigs.k8s.io/docs/start/)
 - [K3s](https://rancher.com/docs/k3s/latest/en/quick-start/)
 - [Microk8s](https://microk8s.io/)
+- [OpenShift](https://docs.openshift.com/container-platform/4.14/welcome/index.html)
   
 
 ### Cloning and Running the Application Locally 
