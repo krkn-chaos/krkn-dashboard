@@ -1,21 +1,29 @@
-import { Card, CardBody } from "@patternfly/react-core";
+import {
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+} from "@patternfly/react-icons";
 
 import React from "react";
-import { useSelector } from "react-redux";
 
-const PODStatus = () => {
-  const { pod_status } = useSelector((state) => state.experiment);
+const PODStatus = (props) => {
+  const message = props.pod_status === "0" ? "Pass" : "Fail";
+  const statusClass = props.pod_status === "0" ? "passClass" : "failClass";
 
-  const message = pod_status === "0" ? "Pass" : "Fail";
-  const statusClass = pod_status === "0" ? "passClass" : "failClass";
   return (
     <>
-      {pod_status !== null && (
-        <Card className={`status-card ${statusClass}`}>
-          <CardBody className={statusClass}>
-            <div>{message}</div>
-          </CardBody>
-        </Card>
+      {props.pod_status !== null && (
+        <div className="pod-status-class">
+          <div>
+            <span className={`icon-class ${statusClass}`}>
+              {statusClass === "passClass" ? (
+                <CheckCircleIcon />
+              ) : (
+                <ExclamationCircleIcon />
+              )}
+            </span>
+            {message}
+          </div>
+        </div>
       )}
     </>
   );

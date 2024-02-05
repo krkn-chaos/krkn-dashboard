@@ -57,7 +57,7 @@ const scenariosOptions = [
 const ScenariosList = () => {
   const dispatch = useDispatch();
   const scenarioChecked = useSelector(
-    (state) => state.experiment.scenarioChecked
+    (state) => state.experiment.scenarioChecked,
   );
   const handleChange = (key) => {
     dispatch(updateScenarioChecked(key));

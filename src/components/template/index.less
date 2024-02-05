@@ -1,17 +1,60 @@
 .run-class {
-    svg {
-        fill: #0066cc;
-        animation: rotation 2s infinite linear;
-    }
+  svg {
+    fill: #5591b8;
+    animation: rotation 2s infinite linear;
+  }
 }
 .state-class {
-    text-transform: capitalize; 
+  text-transform: capitalize;
 }
+
 @keyframes rotation {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(359deg);
-    }
+  from {
+    transform: rotate(0deg);
   }
+  to {
+    transform: rotate(359deg);
+  }
+}
+
+.dot-flashing {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background-color: #afd6ef;
+  color: #afd6ef;
+  animation: dot-flashing 1s infinite linear alternate;
+  animation-delay: 0.5s;
+}
+.dot-flashing::before,
+.dot-flashing::after {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background-color: #afd6ef;
+  color: #afd6ef;
+  animation: dot-flashing 1s infinite alternate;
+}
+.dot-flashing::before {
+  left: 13px;
+  animation-delay: 0s;
+}
+.dot-flashing::after {
+  left: 25px;
+  animation-delay: 1s;
+}
+
+@keyframes dot-flashing {
+  0% {
+    background-color: #afd6ef;
+  }
+  50%,
+  100% {
+    background-color: #d4e2e9;
+  }
+}

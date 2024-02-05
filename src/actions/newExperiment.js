@@ -8,6 +8,7 @@ export const startKraken = (data) => async (dispatch) => {
   try {
     dispatch({ type: TYPES.LOADING });
     dispatch(removePod());
+
     dispatch({
       type: TYPES.SET_POD_STATUS,
       payload: null,
@@ -52,55 +53,48 @@ export const removePod = () => async (dispatch) => {
   }
 };
 
-export const getPodStatus = () => async (dispatch) => {
+export const getPodStatus = (data) => async (dispatch) => {
   try {
-    //  dispatch({ type: TYPES.LOADING });
-    const response = await API.get("/getPodStatus");
-    if (response.data.status === "200") {
-      dispatch({
-        type: TYPES.SET_POD_STATUS,
-        payload: response.data.podStatus.trim(),
-      });
-    }
+    dispatch({
+      type: TYPES.SET_POD_STATUS,
+      payload: data.podStatus.trim(),
+    });
   } catch (error) {
     dispatch(showToast("danger", "Something went wrong", "Try again later"));
   }
-  // dispatch({ type: TYPES.COMPLETED });
 };
 
-export const getLogs = () => async (dispatch) => {
+export const getLogs = (data) => async (dispatch) => {
   try {
     dispatch({ type: TYPES.LOADING });
-    const response = await API.get("/getLogs");
-    if (response.status === 200 && response.data.message) {
-      dispatch({
-        type: TYPES.SET_LOGS,
-        payload: {
-          logs: response.data.message,
-          errorLogs: response.data?.errorLog?.substring(1500),
-        },
-      });
-    }
+    dispatch({
+      type: TYPES.SET_LOGS,
+      payload: {
+        logs: data.toString().replaceAll(/\n/g, "<br />"),
+        errorLogs: data,
+      },
+    });
   } catch (error) {
     dispatch(showToast("danger", "Something went wrong", "Try again later"));
   }
+
   dispatch({ type: TYPES.COMPLETED });
 };
 
-export const getPodDetails = () => async (dispatch) => {
+export const getPodDetails = () => async (dispatch, getState) => {
   try {
-    //  dispatch({ type: TYPES.LOADING });
-    const response = await API.get("/getPodDetails");
-    if (response.status === 200 && response.data.message) {
+    const { socketInstance } = getState().experiment;
+    socketInstance.emit("podStatus");
+    socketInstance.on("podStatus", (data) => {
+      console.log("I am from London");
       dispatch({
         type: TYPES.SET_POD_DETAILS,
-        payload: JSON.parse(response.data.message)[0],
+        payload: data[0],
       });
-    }
+    });
   } catch (error) {
     dispatch(showToast("danger", "Something went wrong", "Try again later"));
   }
-  // dispatch({ type: TYPES.COMPLETED });
 };
 
 export const updateScenarioChecked = (scenario) => ({
@@ -123,3 +117,12 @@ export const checkPodmanInstalled = () => async (dispatch) => {
     dispatch({ type: TYPES.GET_PODMAN_STATUS, payload: true });
   }
 };
+
+export const emptyLogs = () => ({
+  type: TYPES.EMPTY_LOGS,
+});
+
+export const setSocketInstance = (socketInstance) => ({
+  type: TYPES.SET_SOCKET_INSTANCE,
+  payload: socketInstance,
+});

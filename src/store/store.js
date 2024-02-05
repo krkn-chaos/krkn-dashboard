@@ -12,7 +12,7 @@ const composeEnhancers =
     : compose;
 
 const enhancers = composeEnhancers(
-  applyMiddleware(thunkMiddleware, createLogger())
+  applyMiddleware(thunkMiddleware, createLogger()),
 );
 
 const store = createStore(reducer, enhancers);
