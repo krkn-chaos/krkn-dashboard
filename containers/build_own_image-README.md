@@ -1,6 +1,19 @@
 # Building your own Kraken dashboard image
-- Git clone the Kraken repository using git clone https://github.com/krkn-chaos/krkn-dashboard.git
-- Execute ` podman build -t <new_image_name>:latest -f containers/dockerfile ` in the containers directory within krkn-dashboard to build an image from a Dockerfile.
-- Once the build is completed, run ` podman image ls ` to list all the images. The newly created image can be found here.
--  To create and run a container with the image execute ` podman run --net=host -p 3000:3000 -d  --name <container_name> <new_image_name>:latest `
-- Go to http://localhost:3000 to check the dashboard running on the docker container.
+
+### Clone the repository 
+```
+$ git clone https://github.com/krkn-chaos/krkn-dashboard.git
+```
+
+### Build the image
+```
+$ cd krkn-dashboard
+$ podman build -t <new_image_name>:latest -f containers/dockerfile .
+``` 
+
+### Run
+```
+$ podman run --net=host -p 3000:3000 -d  --name <container_name> <new_image_name>:latest
+```
+
+Go to http://localhost:3000 to check the dashboard and trigger krkn scenarios!
