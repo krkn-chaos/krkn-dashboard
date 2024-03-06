@@ -19,6 +19,7 @@ const DetailsTable = () => {
     state: "State",
     status: "Status",
   };
+
   return (
     <>
       {podDetails && (
@@ -40,8 +41,8 @@ const DetailsTable = () => {
                 <Td>{podDetails.Id?.toString()?.substr(0, 8)}</Td>
                 <Td>{podDetails.Image}</Td>
                 <Td>{podDetails.CreatedAt}</Td>
-                <Td>{podDetails.Names[0]}</Td>
-                <Td>{podDetails.Mounts[0]}</Td>
+                <Td>{podDetails.Names}</Td>
+                <Td>{podDetails.Mounts}</Td>
                 <Td className="state-class">
                   {podDetails.State === "running" ? (
                     <span className="run-class">

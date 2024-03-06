@@ -1,7 +1,5 @@
 import {
   Button,
-  Form,
-  FormGroup,
   Modal,
   ModalVariant,
   TextInputGroup,
@@ -52,41 +50,35 @@ const RootPasswordModal = () => {
       isOpen={isRootModalOpen}
       onClose={() => dispatch(checkForRootPassword(false))}
     >
-      <Form isWidthLimited>
-        <FormGroup
-          label="Super user password"
-          isRequired
-          fieldId="rootUserPasswd"
-        >
-          <TextInputGroup>
-            <TextInputGroupMain
-              value={rootPassword}
-              isRequired
-              type={passwordType}
-              id="rootUserPasswd"
-              name="rootUserPasswd"
-              onChange={handleChange}
-            />
-            <TextInputGroupUtilities>
-              <Button
-                variant="plain"
-                onClick={togglePassword}
-                aria-label="Show or Hide password"
-              >
-                {passwordType === "password" ? <EyeSlashIcon /> : <EyeIcon />}
-              </Button>
-            </TextInputGroupUtilities>
-          </TextInputGroup>
-        </FormGroup>
-        <div className="action-group-wrapper">
-          <TextButton
-            variant="primary"
-            isBtnDisabled={!rootPassword}
-            clickHandler={setRootPasswd}
-            text={"Submit"}
+      <div>
+        <TextInputGroup>
+          <TextInputGroupMain
+            value={rootPassword}
+            type={passwordType}
+            id="rootUserPasswd"
+            name="rootUserPasswd"
+            onChange={handleChange}
+            placeholder="Enter the root password"
           />
-        </div>
-      </Form>
+          <TextInputGroupUtilities>
+            <Button
+              variant="plain"
+              onClick={togglePassword}
+              aria-label="Show or Hide password"
+            >
+              {passwordType === "password" ? <EyeSlashIcon /> : <EyeIcon />}
+            </Button>
+          </TextInputGroupUtilities>
+        </TextInputGroup>
+      </div>
+      <div className="action-group-wrapper">
+        <TextButton
+          variant="primary"
+          isBtnDisabled={!rootPassword}
+          clickHandler={setRootPasswd}
+          text={"Submit"}
+        />
+      </div>
     </Modal>
   );
 };

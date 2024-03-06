@@ -59,6 +59,9 @@ const Overview = () => {
 
     if (isPodmanInstalled) {
       dispatch(checkForRootPassword(false));
+    }
+
+    if (passwd) {
       dispatch(getPodDetails());
     }
     return () => {
