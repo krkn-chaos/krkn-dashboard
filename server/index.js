@@ -69,7 +69,7 @@ app.get("/getPodDetails", (req, res) => {
       res.write(stdout, "", () => {
         console.log("Writing Pod Details...");
       });
-      res.end("hello");
+      res.end("");
     } else if (stderr) {
       res.json({ message: stderr, status: "failed" });
     } else if (err) {

@@ -25,6 +25,7 @@ import NewExperiment from "@/components/NewExperiment";
 import RootPasswordModal from "@/components/molecules/PasswordModal";
 import ScenariosCard from "@/components/template/ScenariosCard";
 import socketIOClient from "socket.io-client";
+import { useInterval } from "@/utils/hooks";
 
 const Overview = () => {
   const dispatch = useDispatch();
@@ -33,7 +34,9 @@ const Overview = () => {
 
   const [socket, setSocket] = useState(null);
 
-  const { isPodmanInstalled } = useSelector((state) => state.experiment);
+  const { isPodmanInstalled, podDetails } = useSelector(
+    (state) => state.experiment
+  );
 
   const cookies = new Cookies(null, { path: "/" });
   const passwd = cookies.get("root-password");
@@ -60,8 +63,7 @@ const Overview = () => {
     if (isPodmanInstalled) {
       dispatch(checkForRootPassword(false));
     }
-
-    if (passwd) {
+    if (isPodmanInstalled && passwd) {
       dispatch(getPodDetails());
     }
     return () => {
@@ -71,6 +73,14 @@ const Overview = () => {
     };
   }, [dispatch, isPodmanInstalled]);
 
+  useInterval(
+    () => {
+      if (isPodmanInstalled && passwd) {
+        dispatch(getPodDetails());
+      }
+    },
+    podDetails?.State !== "exited" ? 6000 : null
+  );
   return (
     <div className="overview-wrapper">
       <Card className="overview-card">

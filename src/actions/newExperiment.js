@@ -7,7 +7,6 @@ import { showToast } from "./toastActions";
 export const startKraken = (data) => async (dispatch) => {
   try {
     dispatch({ type: TYPES.LOADING });
-    dispatch(removePod());
 
     dispatch({
       type: TYPES.SET_POD_STATUS,
@@ -22,7 +21,6 @@ export const startKraken = (data) => async (dispatch) => {
         payload: response.data.message,
       });
       dispatch(showToast("success", "Kraken started successfully!"));
-      dispatch(getPodDetails());
     } else {
       dispatch(showToast("danger", response.data.message));
     }
