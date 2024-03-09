@@ -6,6 +6,9 @@ export const LOADING = "LOADING";
 export const SHOW_TOAST = "SHOW_TOAST";
 export const CLEAR_TOAST = "CLEAR_TOAST";
 
+/* Header */
+export const TOGGLE_SIDE_MENU = "TOGGLE_SIDE_MENU";
+
 /*New experiment*/
 export const SET_DATA = "SET_DATA";
 export const SET_POD_STATUS = "SET_POD_STATUS";
