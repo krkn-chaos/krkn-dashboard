@@ -22,6 +22,7 @@
   .parent {
     display: flex;
     flex-wrap: wrap;
+    justify-content: space-evenly;
     .card {
       margin: 0.5vw;
     }
@@ -29,7 +30,7 @@
       cursor: pointer;
     }
     .card.active {
-      border: 2px solid #B4CBF0;
+      border: 2px solid #45b5f5;
     }
     .card-wrapper {
       display: flex;
@@ -38,8 +39,8 @@
       height: 10vh;
       .img-wrapper {
         svg {
-          width: 40px;
-          height: 40px;
+          width: 35px;
+          height: 35px;
         }
       }
       .scenario-icon {
@@ -47,7 +48,7 @@
         height: 50px;
       }
       .scenario-name {
-        padding: 10px 0;
+        padding-top: 5px;
       }
     }
   }

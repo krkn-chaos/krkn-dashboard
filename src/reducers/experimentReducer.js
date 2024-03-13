@@ -5,7 +5,7 @@ const initialState = {
   pod_status: null,
   logs: "",
   podDetails: null,
-  scenarioChecked: "pod-scenarios",
+  scenarioChecked: "container-scenarios",
   isRootModalOpen: false,
   namsespaces: [],
   isPodmanInstalled: false,

@@ -2,6 +2,7 @@ import "./index.less";
 
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 
+import { Label } from "@patternfly/react-core";
 import PODStatus from "@/components/Overview/PODStatus";
 import React from "react";
 import { SyncAltIcon } from "@patternfly/react-icons";
@@ -22,48 +23,73 @@ const DetailsTable = () => {
 
   return (
     <>
-      {podDetails && (
-        <div className="details-card-body">
-          <Table>
-            <Thead>
-              <Tr>
-                <Th width={10}>{columnNames.containerID}</Th>
-                <Th width={20}>{columnNames.image}</Th>
-                <Th width={10}>{columnNames.created}</Th>
-                <Th width={10}>{columnNames.name}</Th>
-                <Th width={10}>{columnNames.mount}</Th>
-                <Th width={10}>{columnNames.state}</Th>
-                <Th width={10}>{columnNames.status}</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              <Tr>
-                <Td>{podDetails.Id?.toString()?.substr(0, 8)}</Td>
-                <Td>{podDetails.Image}</Td>
-                <Td>{podDetails.CreatedAt}</Td>
-                <Td>{podDetails.Names}</Td>
-                <Td>{podDetails.Mounts}</Td>
-                <Td className="state-class">
-                  {podDetails.State === "running" ? (
-                    <span className="run-class">
-                      <SyncAltIcon /> Running
-                    </span>
-                  ) : (
-                    podDetails.State
-                  )}
-                </Td>
-                <Td>
-                  {podDetails.State === "running" ? (
-                    <div className="dot-flashing"></div>
-                  ) : (
-                    <PODStatus pod_status={podDetails.ExitCode} />
-                  )}
-                </Td>
-              </Tr>
-            </Tbody>
-          </Table>
-        </div>
-      )}
+      {podDetails &&
+        Object.keys(podDetails).length > 0 &&
+        podDetails.constructor === Object && (
+          <div className="details-card-body">
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th width={10}>{columnNames.containerID}</Th>
+                  <Th width={30}>{columnNames.image}</Th>
+                  <Th width={20}>{columnNames.created}</Th>
+                  <Th width={5}>{columnNames.name}</Th>
+                  <Th width={15}>{columnNames.mount}</Th>
+                  <Th width={10}>{columnNames.state}</Th>
+                  <Th width={10}>{columnNames.status}</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                <Tr>
+                  <Td>{podDetails.Id?.toString()?.substr(0, 8)}</Td>
+                  <Td>{podDetails.Image}</Td>
+                  <Td>{podDetails.CreatedAt}</Td>
+                  <Td>{podDetails.Names}</Td>
+                  <Td>{podDetails.Mounts}</Td>
+                  <Td className="state-class">
+                    {podDetails.State === "running" ? (
+                      <Label
+                        className="run-class"
+                        variant="outline"
+                        color={"blue"}
+                        icon={<SyncAltIcon />}
+                      >
+                        RUNNING
+                      </Label>
+                    ) : (
+                      podDetails.State
+                    )}
+                  </Td>
+                  <Td>
+                    {podDetails.State === "running" ? (
+                      <div className="flash-box">
+                        <div className="dot-flashing"></div>
+                      </div>
+                    ) : (
+                      <PODStatus pod_status={podDetails.ExitCode} />
+                    )}
+                  </Td>
+                  {/* <Td className="state-class">
+                    <Label
+                      className="run-class"
+                      variant="outline"
+                      color={"blue"}
+                      icon={<SyncAltIcon />}
+                    >
+                      RUNNING
+                    </Label>
+                  </Td>
+                  <Td>
+                    {" "}
+                    <div className="flash-box">
+                      <div className="dot-flashing"></div>
+                    </div>
+                  </Td> */}
+                </Tr>
+              </Tbody>
+            </Table>
+          </div>
+        )}
     </>
   );
 };
