@@ -6,8 +6,8 @@ import {
 import React from "react";
 
 const PODStatus = (props) => {
-  const message = props.pod_status === "0" ? "Pass" : "Fail";
-  const statusClass = props.pod_status === "0" ? "passClass" : "failClass";
+  const message = props.pod_status === 0 ? "Pass" : "Fail";
+  const statusClass = props.pod_status === 0 ? "passClass" : "failClass";
 
   return (
     <>
