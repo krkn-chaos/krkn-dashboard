@@ -8,7 +8,7 @@ $ git clone https://github.com/krkn-chaos/krkn-dashboard.git
 ### Build the image
 ```
 $ cd krkn-dashboard
-$ podman build -t <new_image_name>:latest -f containers/dockerfile .
+$ podman build -t <new_image_name>:latest -f containers/Dockerfile .
 ``` 
 
 ### Run
