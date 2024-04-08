@@ -14,6 +14,7 @@ import React, { useState } from "react";
 import { removePod, startKraken } from "@/actions/newExperiment";
 import { useDispatch, useSelector } from "react-redux";
 
+import KubeconfigFileUpload from "@/components/molecules/FileUpload";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import { paramsList } from "./experimentFormData";
 
@@ -111,6 +112,8 @@ const NewExperiment = () => {
               labelOff="Cerberus Disabled"
             />
           </div>
+          <KubeconfigFileUpload />
+          <div>or</div>
           {scenarioChecked &&
             paramsList[scenarioChecked].map((item) => {
               return (

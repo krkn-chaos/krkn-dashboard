@@ -10,6 +10,7 @@ const initialState = {
   namsespaces: [],
   isPodmanInstalled: false,
   socketInstance: null,
+  kubeConfigFile: "",
 };
 
 const experimentReducer = (state = initialState, action) => {
@@ -40,6 +41,8 @@ const experimentReducer = (state = initialState, action) => {
       return { ...state, isPodmanInstalled: action.payload };
     case TYPES.SET_SOCKET_INSTANCE:
       return { ...state, socketInstance: action.payload };
+    case TYPES.FILE_CONTENT:
+      return { ...state, kubeConfigFile: action.payload };
     default:
       return state;
   }
