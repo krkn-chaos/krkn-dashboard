@@ -21,7 +21,7 @@ const NewExperiment = () => {
   const dispatch = useDispatch();
   const [isBtnDisabled, setIsBtnDisabled] = useState(true);
   const scenarioChecked = useSelector(
-    (state) => state.experiment.scenarioChecked,
+    (state) => state.experiment.scenarioChecked
   );
 
   const [data, setData] = useState({
@@ -88,7 +88,7 @@ const NewExperiment = () => {
   };
   const checkBtnDisabled = () => {
     const isFull = Object.values(data[scenarioChecked]).every(
-      (x) => x !== null || x !== "",
+      (x) => x !== null || x !== ""
     );
     setIsBtnDisabled(!isFull);
   };
@@ -96,6 +96,7 @@ const NewExperiment = () => {
     await dispatch(removePod());
     await dispatch(startKraken(data[scenarioChecked]));
   };
+
   return (
     <Card className="start-kraken-modal margin-top">
       <CardBody>

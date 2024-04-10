@@ -7,7 +7,6 @@ import { showToast } from "./toastActions";
 export const startKraken = (data) => async (dispatch) => {
   try {
     dispatch({ type: TYPES.LOADING });
-    dispatch(removePod());
 
     dispatch({
       type: TYPES.SET_POD_STATUS,
@@ -22,7 +21,6 @@ export const startKraken = (data) => async (dispatch) => {
         payload: response.data.message,
       });
       dispatch(showToast("success", "Kraken started successfully!"));
-      dispatch(getPodDetails());
     } else {
       dispatch(showToast("danger", response.data.message));
     }
@@ -35,7 +33,7 @@ export const startKraken = (data) => async (dispatch) => {
 export const removePod = () => async (dispatch) => {
   try {
     const response = await API.get("/removePod");
-    if (response.data.status === "200") {
+    if (response.data === "200") {
       dispatch({
         type: TYPES.SET_POD_STATUS,
         payload: null,
@@ -86,7 +84,6 @@ export const getPodDetails = () => async (dispatch, getState) => {
     const { socketInstance } = getState().experiment;
     socketInstance.emit("podStatus");
     socketInstance.on("podStatus", (data) => {
-      console.log("I am from London");
       dispatch({
         type: TYPES.SET_POD_DETAILS,
         payload: data[0],

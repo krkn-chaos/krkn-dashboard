@@ -40,8 +40,7 @@ app.post("/start-kraken/", (req, res) => {
         id: stdout,
         status: "200",
       });
-    }
-    if (stderr || err) {
+    } else if (stderr || err) {
       res.json({ message: stderr, status: "failed" });
     }
   });
@@ -56,8 +55,7 @@ app.get("/getPodStatus", (req, res) => {
         podStatus: stdout,
         status: "200",
       });
-    }
-    if (stderr || err) {
+    } else if (stderr || err) {
       res.json({ message: stderr, status: "failed" });
     }
   });
@@ -68,10 +66,14 @@ app.get("/getPodDetails", (req, res) => {
   const command = `echo '${passwd}' | sudo -S podman ps -a --format=json`;
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
-      res.json({ message: stdout });
-    }
-    if (stderr || err) {
+      res.write(stdout, "", () => {
+        console.log("Writing Pod Details...");
+      });
+      res.end("");
+    } else if (stderr) {
       res.json({ message: stderr, status: "failed" });
+    } else if (err) {
+      res.json({ message: err, status: "failed" });
     }
   });
 });
@@ -82,8 +84,7 @@ app.get("/getNamespaces", (req, res) => {
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
       res.json({ message: JSON.parse(stdout) });
-    }
-    if (stderr || err) {
+    } else if (stderr || err) {
       res.json({ message: stderr, status: "failed" });
     }
   });
@@ -96,10 +97,14 @@ app.get("/removePod", (req, res) => {
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
       res.json({ message: stdout });
-    }
-    if (stderr || err) {
+    } else if (stderr || err) {
       res.json({ message: stderr, status: "failed" });
+    } else {
+      res.write("200", "", () => {
+        console.log("Writing string Data...");
+      });
     }
+    res.end();
   });
 });
 
@@ -110,10 +115,10 @@ app.get("/getPodmanStatus", (req, res) => {
       const version = stdout.split(" ")[2];
       const hasVersion = !!Number(version?.split(".").join(""));
       res.json({ message: hasVersion, status: "success" });
-    }
-    if (stderr || err) {
+    } else if (stderr || err) {
       res.json({ message: stderr, status: "failed" });
     }
+    res.end();
   });
 });
 
@@ -148,7 +153,7 @@ io.on("connection", (socket) => {
       socket.emit("podStatus", JSON.parse(data));
     });
     ls.stderr.on("data", (data) => {
-      socket.emit("podStatus", JSON.parse(data));
+      socket.emit("podStatus", data);
     });
   });
 });
