@@ -94,7 +94,7 @@ const NewExperiment = () => {
     setIsBtnDisabled(!isFull);
   };
   const sendData = async () => {
-    await dispatch(removePod());
+    // await dispatch(removePod());
     await dispatch(startKraken(data[scenarioChecked]));
   };
 

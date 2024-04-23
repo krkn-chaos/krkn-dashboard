@@ -1,6 +1,17 @@
-FROM node:18
-# Create app directory
-WORKDIR /usr/src/krkn-dashboard
+# Use an official Fedora base image
+FROM fedora:latest
+
+# Update and install necessary packages
+RUN dnf update -y && \
+    dnf install -y curl git podman-remote nodejs && \
+    dnf clean all
+
+# Display installed versions
+RUN node -v && \
+    npm -v && \
+    podman-remote --version
+
+WORKDIR /usr/src/chaos-dashboard
 # Install app dependencies
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 # where available (npm@5+)
