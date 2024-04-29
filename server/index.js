@@ -29,30 +29,41 @@ chmodr(uploadFilePath, 0o777, (err) => {
     console.log("Success");
   }
 });
-
+let PODMAN = "";
+if (process.env.CONTAINER_HOST) {
+  PODMAN = "podman-remote";
+} else {
+  PODMAN = "podman";
+}
 app.post("/start-kraken/", (req, res) => {
   const passwd = req.headers?.authorization?.split(" ")[1];
   const scenario = req.body.params.scenarioChecked;
-  // const kubeConfigPath = req.body.params.isFileUpload
-  //   ? uploadFilePath
-  //   : req.body.params.kubeconfigPath;
-  const kubeConfigPath = `${process.env.CHAOS_ASSETS}/kubeconfig`;
+  let kubeConfigPath = "";
+
+  if (process.env.CONTAINER_HOST) {
+    kubeConfigPath = `${process.env.CHAOS_ASSETS}/kubeconfig`;
+  } else {
+    kubeConfigPath = req.body.params.isFileUpload
+      ? uploadFilePath
+      : req.body.params.kubeconfigPath;
+  }
+
   let command = "";
   switch (scenario) {
     case "pod-scenarios":
-      command = `podman-remote run --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_TIMEOUT=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:pod-scenarios`;
+      command = `${PODMAN} run --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_TIMEOUT=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:pod-scenarios`;
       break;
     case "container-scenarios":
-      command = `podman-remote run  --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:container-scenarios`;
+      command = `${PODMAN} run  --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:container-scenarios`;
       break;
     case "node-cpu-hog":
-      command = `podman-remote run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-cpu-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-cpu-hog`;
       break;
     case "node-io-hog":
-      command = `podman-remote run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-io-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-io-hog`;
       break;
     case "node-memory-hog":
-      command = `podman-remote run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-memory-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=ui --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-memory-hog`;
       break;
     default:
       command = `echo '${passwd}'`;
@@ -87,7 +98,7 @@ app.get("/getPodStatus", (req, res) => {
 
 app.get("/getPodDetails", (req, res) => {
   const passwd = req.headers?.authorization?.split(" ")[1];
-  const command = `podman-remote ps -a --format=json`;
+  const command = `${PODMAN} ps -a --format=json`;
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
       res.write(stdout, "", () => {
@@ -117,7 +128,7 @@ app.get("/getNamespaces", (req, res) => {
 app.get("/removePod", (req, res) => {
   const passwd = req.headers?.authorization?.split(" ")[1];
 
-  const command = `podman-remote rm -f ui`;
+  const command = `${PODMAN} rm -f ui`;
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
       res.json({ message: stdout });
@@ -184,7 +195,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("logs", (passwd) => {
-    const command = `podman-remote logs -f ui`;
+    const command = `${PODMAN} logs -f ui`;
     const ls = child_process.exec(command);
     ls.stdout.on("data", (data) => {
       socket.emit("logs", data);
@@ -194,7 +205,7 @@ io.on("connection", (socket) => {
     });
   });
   socket.on("podStatus", () => {
-    const command = `podman-remote ps -a --format=json`;
+    const command = `${PODMAN} ps -a --format=json`;
     const ls = child_process.exec(command);
     ls.stdout.on("data", (data) => {
       socket.emit("podStatus", JSON.parse(data));
