@@ -32,7 +32,15 @@ const Header = () => {
       </MastheadToggle>
       <MastheadMain>
         <MastheadBrand href="/">
-          <Brand src={logo} className="header-logo" alt="kraken Logo" />
+          {import.meta.env.CONTAINER_BUILD ? (
+            <Brand
+              src={`${import.meta.env.CHAOS_ASSETS}/logo/logo.png`}
+              className="header-logo"
+              alt="kraken Logo"
+            />
+          ) : (
+            <Brand src={logo} className="header-logo" alt="kraken Logo" />
+          )}
         </MastheadBrand>
       </MastheadMain>
     </Masthead>

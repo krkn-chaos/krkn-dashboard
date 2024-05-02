@@ -2,12 +2,17 @@ import * as TYPES from "./types";
 
 import API from "@/utils/axiosInstance";
 import Cookies from "universal-cookie";
+import axios from "axios";
 import { showToast } from "./toastActions";
 
-export const startKraken = (data) => async (dispatch) => {
+export const startKraken = (data) => async (dispatch, getState) => {
   try {
     dispatch({ type: TYPES.LOADING });
-
+    dispatch(removePod());
+    const { kubeConfigFile } = getState().experiment;
+    if (kubeConfigFile) {
+      data["isFileUpload"] = true;
+    }
     dispatch({
       type: TYPES.SET_POD_STATUS,
       payload: null,
@@ -123,3 +128,33 @@ export const setSocketInstance = (socketInstance) => ({
   type: TYPES.SET_SOCKET_INSTANCE,
   payload: socketInstance,
 });
+
+export const updateFileContent = (content) => ({
+  type: TYPES.FILE_CONTENT,
+  payload: content,
+});
+
+export const fileUpload = (fileObj) => async (dispatch) => {
+  try {
+    dispatch({ type: TYPES.LOADING });
+    const formData = new FormData();
+
+    formData.append("files", fileObj);
+
+    const response = await axios.post(
+      "http://localhost:8000/uploadFile",
+      formData,
+      {
+        headers: {
+          "content-type": "multipart/form-data",
+        },
+      }
+    );
+    if (response.data.status === "200") {
+      dispatch(showToast("success", "File uploaded successfully", ""));
+    }
+  } catch {
+    dispatch(showToast("danger", "Something went wrong", "Try again later"));
+  }
+  dispatch({ type: TYPES.COMPLETED });
+};

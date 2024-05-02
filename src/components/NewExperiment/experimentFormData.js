@@ -6,7 +6,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "namespace",
@@ -73,7 +73,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "namespace",
@@ -132,7 +132,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "action",
@@ -191,7 +191,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "namespace",
@@ -218,7 +218,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "pvc_name",
@@ -268,7 +268,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "object_type",
@@ -326,7 +326,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "shutdown_duration",
@@ -360,7 +360,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "total_chaos_duration",
@@ -411,7 +411,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "total_chaos_duration",
@@ -470,7 +470,7 @@ export const paramsList = {
       fieldId: "configPath-id",
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
-      isRequired: true,
+      isRequired: false,
     },
     {
       key: "total_chaos_duration",
