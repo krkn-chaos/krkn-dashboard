@@ -8,7 +8,7 @@ import { showToast } from "./toastActions";
 export const startKraken = (data) => async (dispatch, getState) => {
   try {
     dispatch({ type: TYPES.LOADING });
-    // dispatch(removePod());
+    dispatch(removePod());
     const { kubeConfigFile } = getState().experiment;
     if (kubeConfigFile) {
       data["isFileUpload"] = true;

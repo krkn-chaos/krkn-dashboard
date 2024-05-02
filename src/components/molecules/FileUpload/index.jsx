@@ -12,6 +12,7 @@ const KubeconfigFileUpload = () => {
   const handleFileInputChange = (_, file) => {
     setFilename(file.name);
     dispatch(fileUpload(file));
+    dispatch(updateFileContent(true));
   };
   const handleClear = () => {
     setFilename("");

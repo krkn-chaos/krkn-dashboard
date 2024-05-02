@@ -52,7 +52,12 @@ const Overview = () => {
     }
   };
   useEffect(() => {
-    const socketInstance = socketIOClient("http://localhost:8000", {
+    const socketInstance = socketIOClient.io("http://localhost:8000", {
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 4000,
+      reconnectionDelayMax: 5000,
+      transports: ["websocket"],
       extraHeaders: {
         passwd: passwd,
       },
