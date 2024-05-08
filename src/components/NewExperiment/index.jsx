@@ -10,12 +10,12 @@ import {
   Title,
 } from "@patternfly/react-core";
 import React, { useState } from "react";
-import { removePod, startKraken } from "@/actions/newExperiment";
 import { useDispatch, useSelector } from "react-redux";
 
 import KubeconfigFileUpload from "@/components/molecules/FileUpload";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import { paramsList } from "./experimentFormData";
+import { startKraken } from "@/actions/newExperiment";
 
 const NewExperiment = () => {
   const dispatch = useDispatch();

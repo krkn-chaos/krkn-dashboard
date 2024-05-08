@@ -5,6 +5,12 @@
 $ git clone https://github.com/krkn-chaos/krkn-dashboard.git
 ```
 
+### Checkout the branch
+
+```
+$ git checkout <feature_branch> 
+```
+
 ### Build the image
 ```
 $ cd krkn-dashboard
