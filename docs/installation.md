@@ -32,4 +32,4 @@ In order to start the express server and run the application use the following c
 $ npm run dev
 ```
 
-The application runs on http://localhost:3000 in the default browser.
+The application runs on http://localhost:8000 in the default browser.

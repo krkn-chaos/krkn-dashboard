@@ -19,7 +19,9 @@ $ export CHAOS_ASSETS=/var/tmp/chaos
 
 $ mkdir -p $CHAOS_ASSETS
 
-$ podman run --env CHAOS_ASSETS -v $CHAOS_ASSETS:/usr/src/chaos-dashboard/src/assets:z -v /run/podman/podman.sock:/run/podman/podman.sock --net=host -d --name <container_name> <new_image_name>:latest
+$ podman run --env CHAOS_ASSETS -v $CHAOS_ASSETS:/usr/src/chaos-dashboard/src/assets:z --net=host -d --name <container_name> <new_image_name>:latest
 ```
 
-Go to http://localhost:3000 to check the dashboard and trigger krkn scenarios!
+**NOTE**: Mount the docker socket when using docker as the runtime: -v /var/run/docker.sock:/var/run/docker.sock
+
+Go to http://localhost:8000 to check the dashboard and trigger krkn scenarios!
