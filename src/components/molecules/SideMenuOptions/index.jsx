@@ -17,12 +17,6 @@ const sideMenuOptions = [
     icon: <CatalogIcon />,
   },
   {
-    id: 2,
-    key: "events",
-    displayName: "Events",
-    icon: <CatalogIcon />,
-  },
-  {
     id: 3,
     key: "archives",
     displayName: "Archives",

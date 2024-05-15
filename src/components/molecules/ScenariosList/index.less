@@ -2,12 +2,34 @@
   .parent {
     display: flex;
     flex-wrap: wrap;
-    .scenario {
-      width: 50%;
-      padding: 1vh 0;
+    justify-content: space-evenly;
+    .card {
+      margin: 0.5vw;
     }
-    .pf-c-radio__label {
-      padding-left: 1.5vh;
+    .card:hover {
+      cursor: pointer;
+    }
+    .card.active {
+      border: 2px solid #45b5f5;
+    }
+    .card-wrapper {
+      display: flex;
+      justify-content: space-between;
+      width: 15vw;
+      height: 10vh;
+      .img-wrapper {
+        svg {
+          width: 35px;
+          height: 35px;
+        }
+      }
+      .scenario-icon {
+        width: 50px;
+        height: 50px;
+      }
+      .scenario-name {
+        padding-top: 5px;
+      }
     }
   }
 }

@@ -8,15 +8,18 @@ import {
   MastheadToggle,
   PageToggleButton,
 } from "@patternfly/react-core";
-import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import { BarsIcon } from "@patternfly/react-icons";
+import React from "react";
 import logo from "@/assets/logo/logo.png";
+import { toggleSideMenu } from "@/actions/headerActions";
 
 const Header = () => {
-  const [isNavOpen, setIsNavOpen] = useState(true);
+  const dispatch = useDispatch();
+  const { isNavOpen } = useSelector((state) => state.header);
   const onNavToggle = () => {
-    setIsNavOpen(!isNavOpen);
+    dispatch(toggleSideMenu());
   };
   return (
     <Masthead>

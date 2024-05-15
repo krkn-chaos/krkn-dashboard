@@ -50,7 +50,7 @@
 .pod-status-class {
   .passClass {
     svg {
-      fill: #71f5e8;
+      fill: #6ab187;
     }
   }
   .icon-class {
@@ -58,7 +58,7 @@
   }
   .failClass {
     svg {
-      fill: #f67280;
+      fill: #d32d41;
     }
   }
 }
@@ -74,10 +74,10 @@
 // }
 
 .status-card.passClass {
-  border-top: 3px solid #71f5e8;
+  border-top: 3px solid #6ab187;
 }
 .status-card.failClass {
-  border-top: 3px solid #f67280;
+  border-top: 3px solid #d32d41;
 }
 
 .details-card {
@@ -85,4 +85,11 @@
 }
 .pf-c-accordion__toggle:focus {
   outline: 0;
+}
+
+.pod-status-class {
+  .pf-c-label {
+    width: 65%;
+    text-transform: uppercase;
+  }
 }

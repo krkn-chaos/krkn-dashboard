@@ -6,17 +6,16 @@ import {
   CardBody,
   Form,
   FormGroup,
-  Switch,
   TextInput,
   Title,
 } from "@patternfly/react-core";
 import React, { useState } from "react";
-import { removePod, startKraken } from "@/actions/newExperiment";
 import { useDispatch, useSelector } from "react-redux";
 
 import KubeconfigFileUpload from "@/components/molecules/FileUpload";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import { paramsList } from "./experimentFormData";
+import { startKraken } from "@/actions/newExperiment";
 
 const NewExperiment = () => {
   const dispatch = useDispatch();
@@ -75,6 +74,28 @@ const NewExperiment = () => {
       node_selectors: "",
       scenarioChecked: "node-memory-hog",
     },
+    "node-scenarios": {
+      kubeconfigPath: "",
+      namespace: "",
+      pod_label: "",
+    },
+    "pvc-scenarios": {
+      kubeconfigPath: "",
+      pvc_name: "",
+      pod_name: "",
+      namespace: "openshift-*",
+      fill_percentage: 50,
+      duration: 60,
+    },
+    "time-scenarios": {
+      kubeconfigPath: "",
+      object_type: "pod",
+      label_selector: "k8s-app=etcd",
+      action: "skew_date",
+      object_name: "",
+      container_name: "",
+      namespace: "",
+    },
   });
 
   const changeHandler = (value, key) => {
@@ -105,15 +126,16 @@ const NewExperiment = () => {
           Supported Parameters
         </Title>
         <Form>
-          <div>
+          {/* <div>
             <Switch
               id="cerberus-switch"
               label="Cerberus Enabled"
               labelOff="Cerberus Disabled"
             />
-          </div>
+          </div>*/}
           <KubeconfigFileUpload />
           <div>or</div>
+
           {scenarioChecked &&
             paramsList[scenarioChecked].map((item) => {
               return (

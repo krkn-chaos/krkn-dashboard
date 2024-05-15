@@ -1,9 +1,10 @@
 import MenuOptions from "@/components/molecules/SideMenuOptions/index";
 import { PageSidebar } from "@patternfly/react-core";
 import React from "react";
+import { useSelector } from "react-redux";
 
 const SideMenu = () => {
-  const isNavOpen = true;
+  const { isNavOpen } = useSelector((state) => state.header);
 
   return (
     <PageSidebar

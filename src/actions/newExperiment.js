@@ -25,6 +25,7 @@ export const startKraken = (data) => async (dispatch, getState) => {
         type: TYPES.SET_DATA,
         payload: response.data.message,
       });
+      dispatch(getPodDetails());
       dispatch(showToast("success", "Kraken started successfully!"));
     } else {
       dispatch(showToast("danger", response.data.message));

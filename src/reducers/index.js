@@ -1,3 +1,4 @@
+import HeadReducer from "./headerReducer";
 import LoadingReducer from "./loadingReducer";
 import ToastReducer from "./toastReducer";
 import { combineReducers } from "redux";
@@ -7,4 +8,5 @@ export default combineReducers({
   experiment: experimentReducer,
   loading: LoadingReducer,
   toastReducer: ToastReducer,
+  header: HeadReducer,
 });
