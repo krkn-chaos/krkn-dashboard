@@ -10,12 +10,12 @@ import {
   Title,
 } from "@patternfly/react-core";
 import React, { useState } from "react";
+import { saveConfig, startKraken } from "@/actions/newExperiment";
 import { useDispatch, useSelector } from "react-redux";
 
 import KubeconfigFileUpload from "@/components/molecules/FileUpload";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import { paramsList } from "./experimentFormData";
-import { startKraken } from "@/actions/newExperiment";
 
 const NewExperiment = () => {
   const dispatch = useDispatch();
@@ -35,6 +35,7 @@ const NewExperiment = () => {
       wait_timeout: 360,
       expected_pod_count: "",
       scenarioChecked: "pod-scenarios",
+      name: "",
     },
     "container-scenarios": {
       kubeconfigPath: "",
@@ -45,6 +46,7 @@ const NewExperiment = () => {
       action: "kill 1",
       expected_recovery_time: 60,
       scenarioChecked: "container-scenarios",
+      name: "",
     },
     "node-cpu-hog": {
       kubeconfigPath: "",
@@ -54,6 +56,7 @@ const NewExperiment = () => {
       namespace: "default",
       node_selectors: "",
       scenarioChecked: "node-cpu-hog",
+      name: "",
     },
     "node-io-hog": {
       kubeconfigPath: "",
@@ -64,6 +67,7 @@ const NewExperiment = () => {
       namespace: "default",
       node_selectors: "",
       scenarioChecked: "node-io-hog",
+      name: "",
     },
     "node-memory-hog": {
       kubeconfigPath: "",
@@ -73,11 +77,13 @@ const NewExperiment = () => {
       namespace: "default",
       node_selectors: "",
       scenarioChecked: "node-memory-hog",
+      name: "",
     },
     "node-scenarios": {
       kubeconfigPath: "",
       namespace: "",
       pod_label: "",
+      name: "",
     },
     "pvc-scenarios": {
       kubeconfigPath: "",
@@ -86,6 +92,7 @@ const NewExperiment = () => {
       namespace: "openshift-*",
       fill_percentage: 50,
       duration: 60,
+      name: "",
     },
     "time-scenarios": {
       kubeconfigPath: "",
@@ -95,6 +102,7 @@ const NewExperiment = () => {
       object_name: "",
       container_name: "",
       namespace: "",
+      name: "",
     },
   });
 
@@ -118,7 +126,9 @@ const NewExperiment = () => {
     // await dispatch(removePod());
     await dispatch(startKraken(data[scenarioChecked]));
   };
-
+  const test = async () => {
+    await dispatch(saveConfig());
+  };
   return (
     <Card className="start-kraken-modal margin-top">
       <CardBody>
@@ -165,6 +175,12 @@ const NewExperiment = () => {
               isBtnDisabled={isBtnDisabled}
               clickHandler={sendData}
               text={"Start Kraken"}
+            />
+            <TextButton
+              variant="primary"
+              isBtnDisabled={isBtnDisabled}
+              clickHandler={test}
+              text={"Save config"}
             />
           </ActionGroup>
         </Form>

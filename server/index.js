@@ -9,16 +9,114 @@ import express from "express";
 import { fileURLToPath } from "url";
 import multer from "multer";
 import process from "process";
+import sqlite3 from "sqlite3";
+
+sqlite3.verbose();
+const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
+const __dirname = path.dirname(__filename); // get the name of the directory
+
+const databaseDirectory = __dirname + "/../database/krkn.db";
+
+const db = new sqlite3.Database(
+  databaseDirectory,
+  sqlite3.OPEN_READWRITE,
+  (err) => {
+    if (err) return console.error(err);
+  }
+);
 
 const PORT = 8000;
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+let sql = "";
 
+db.exec(`CREATE TABLE IF NOT EXISTS test (
+    id INTEGER PRIMARY KEY,
+    movie varchar(50),
+    quote varchar(50),
+    char varchar(50)
+  );`);
+
+// db.exec(`DROP TABLE config`);
+db.exec(`CREATE TABLE IF NOT EXISTS config (
+    id INTEGER PRIMARY KEY,
+    name varchar(50),
+    params json
+  );`);
+
+app.post("/saveConfig", (req, res) => {
+  try {
+    console.log("save fun");
+    //const { movie, quote, char } = req.body.params;
+    const { name, params } = req.body.params;
+    // sql = `INSERT INTO test(MOVIE, QUOTE, CHAR) VALUES (?,?,?)`;
+    sql = `INSERT INTO config(name, params) VALUES (?,?)`;
+    db.run(sql, [name, JSON.stringify(params)], (err) => {
+      if (err) {
+        console.log(err);
+        return res.json({ status: 300, message: "error", error: err });
+      }
+      console.log("successful insertion");
+      return res.json({
+        status: 200,
+        message: "Config saved successfully",
+      });
+    });
+    console.log(req.body.params);
+  } catch (error) {
+    return res.json({
+      status: 400,
+      message: false,
+    });
+  }
+});
+
+app.get("/getConfig", (req, res) => {
+  try {
+    sql = `SELECT * FROM config`;
+    db.all(sql, [], (err, rows) => {
+      if (err) {
+        return res.json({ status: 300, message: "error", error: err });
+      }
+      rows.forEach((row) => {
+        console.log(row);
+      });
+      return res.json({
+        status: 200,
+        message: rows,
+      });
+    });
+  } catch (error) {
+    return res.json({
+      status: 400,
+      message: false,
+    });
+  }
+});
+app.post("/deleteConfig", (req, res) => {
+  try {
+    sql = `DELETE FROM config WHERE id=(?)`;
+    db.run(sql, [req.body.params], (err) => {
+      if (err) {
+        console.log(err);
+        return res.json({ status: 300, message: "error", error: err });
+      }
+      console.log("hey");
+      return res.json({
+        status: 200,
+        message: "Deleted!",
+      });
+    });
+  } catch (error) {
+    return res.json({
+      status: 400,
+      message: false,
+    });
+  }
+});
 /* Set path to upload config file */
-const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
-const __dirname = path.dirname(__filename); // get the name of the directory
 
 const uploadFilePath = path.resolve(__dirname, "../", "src/assets");
 
@@ -66,10 +164,10 @@ app.post("/start-kraken/", (req, res) => {
       command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=krkn --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-memory-hog`;
       break;
     case "pvc-scenarios":
-      command = `echo ${passwd} | sudo -S podman run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=ui --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenario`;
+      command = `echo ${passwd} | sudo -S podman run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=krkn --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenario`;
       break;
     case "time-scenarios":
-      command = `echo ${passwd} | sudo -S podman run --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=ui --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
+      command = `echo ${passwd} | sudo -S podman run --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=krkn --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
       break;
     default:
       command = `echo '${passwd}'`;

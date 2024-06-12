@@ -13,6 +13,7 @@ export const startKraken = (data) => async (dispatch, getState) => {
     if (kubeConfigFile) {
       data["isFileUpload"] = true;
     }
+
     dispatch({
       type: TYPES.SET_POD_STATUS,
       payload: null,
@@ -21,6 +22,10 @@ export const startKraken = (data) => async (dispatch, getState) => {
       params: data,
     });
     if (response.data.status === "200") {
+      dispatch({
+        type: TYPES.SAVE_CONFIG_DATA,
+        payload: data,
+      });
       dispatch({
         type: TYPES.SET_DATA,
         payload: response.data.message,
@@ -36,6 +41,50 @@ export const startKraken = (data) => async (dispatch, getState) => {
   dispatch({ type: TYPES.COMPLETED });
 };
 
+export const saveConfig = () => async (dispatch, getState) => {
+  try {
+    const { configData } = getState().experiment;
+    const data = { name: configData.name, params: configData };
+
+    const response = await API.post("/saveConfig", {
+      params: data,
+    });
+    if (response.data.status === 200) {
+      dispatch(showToast("success", "Paramters saved!"));
+    }
+  } catch (error) {
+    dispatch(showToast("danger", "Something went wrong", "Try again later"));
+  }
+};
+export const getConfig = () => async (dispatch) => {
+  try {
+    const response = await API.get("/getConfig");
+    if (response.data.status === 200) {
+      dispatch({
+        type: TYPES.SET_CONFIG_DATA,
+        payload: response.data.message,
+      });
+    }
+  } catch (error) {
+    dispatch(showToast("danger", "Something went wrong", "Try again later"));
+  }
+};
+export const deleteConfig = (id) => async (dispatch, getState) => {
+  try {
+    const response = await API.post("/deleteConfig", { params: id });
+    const { configDataArr } = getState().experiment;
+    if (response.data.status === 200) {
+      const arr = configDataArr.filter((item) => item.id !== id);
+      dispatch({
+        type: TYPES.SET_CONFIG_DATA,
+        payload: arr,
+      });
+      dispatch(showToast("success", "Config deleted!"));
+    }
+  } catch (error) {
+    dispatch(showToast("danger", "Something went wrong", "Try again later"));
+  }
+};
 export const removePod = () => async (dispatch) => {
   try {
     const response = await API.get("/removePod");

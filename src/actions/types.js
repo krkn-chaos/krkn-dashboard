@@ -9,6 +9,9 @@ export const CLEAR_TOAST = "CLEAR_TOAST";
 /* Header */
 export const TOGGLE_SIDE_MENU = "TOGGLE_SIDE_MENU";
 
+/*Side Menu */
+export const SET_ACTIVE_MENU_ITEM = "SET_ACTIVE_MENU_ITEM";
+
 /*New experiment*/
 export const SET_DATA = "SET_DATA";
 export const SET_POD_STATUS = "SET_POD_STATUS";
@@ -21,3 +24,5 @@ export const GET_PODMAN_STATUS = "GET_PODMAN_STATUS";
 export const EMPTY_LOGS = "EMPTY_LOGS";
 export const SET_SOCKET_INSTANCE = "SET_SOCKET_INSTANCE";
 export const FILE_CONTENT = "FILE_CONTENT";
+export const SAVE_CONFIG_DATA = "SAVE_CONFIG_DATA";
+export const SET_CONFIG_DATA = "SET_CONFIG_DATA";
