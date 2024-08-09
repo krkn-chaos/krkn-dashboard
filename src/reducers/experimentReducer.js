@@ -11,6 +11,9 @@ const initialState = {
   isPodmanInstalled: false,
   socketInstance: null,
   kubeConfigFile: "",
+  configData: {},
+  configDataArr: [],
+  results: [],
 };
 
 const experimentReducer = (state = initialState, action) => {
@@ -43,6 +46,12 @@ const experimentReducer = (state = initialState, action) => {
       return { ...state, socketInstance: action.payload };
     case TYPES.FILE_CONTENT:
       return { ...state, kubeConfigFile: action.payload };
+    case TYPES.SAVE_CONFIG_DATA:
+      return { ...state, configData: action.payload };
+    case TYPES.SET_CONFIG_DATA:
+      return { ...state, configDataArr: action.payload };
+    case TYPES.SET_RESULTS:
+      return { ...state, results: action.payload };
     default:
       return state;
   }

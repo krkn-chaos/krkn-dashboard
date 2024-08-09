@@ -7,8 +7,23 @@ import chmodr from "chmodr";
 import cors from "cors";
 import express from "express";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import multer from "multer";
 import process from "process";
+import sqlite3 from "sqlite3";
+
+sqlite3.verbose();
+const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
+const __dirname = path.dirname(__filename); // get the name of the directory
+
+const databaseDirectory = __dirname + "/../database/krkn.db";
+const db = new sqlite3.Database(
+  databaseDirectory,
+  sqlite3.OPEN_READWRITE,
+  (err) => {
+    if (err) return console.error(err);
+  }
+);
 
 const PORT = 8000;
 const app = express();
@@ -17,10 +32,8 @@ app.use(cors());
 app.use(express.json());
 
 /* Set path to upload config file */
-const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
-const __dirname = path.dirname(__filename); // get the name of the directory
-
 const uploadFilePath = path.resolve(__dirname, "../", "src/assets");
+let myInterval;
 
 chmodr(uploadFilePath, 0o777, (err) => {
   if (err) {
@@ -51,25 +64,25 @@ app.post("/start-kraken/", (req, res) => {
   let command = "";
   switch (scenario) {
     case "pod-scenarios":
-      command = `${PODMAN} run --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_TIMEOUT=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=krkn --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:pod-scenarios`;
+      command = `${PODMAN} run --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_TIMEOUT=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:pod-scenarios`;
       break;
     case "container-scenarios":
-      command = `${PODMAN} run  --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=krkn --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:container-scenarios`;
+      command = `${PODMAN} run  --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:container-scenarios`;
       break;
     case "node-cpu-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=krkn --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-cpu-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-cpu-hog`;
       break;
     case "node-io-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=krkn --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-io-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-io-hog`;
       break;
     case "node-memory-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=krkn --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-memory-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-memory-hog`;
       break;
     case "pvc-scenarios":
-      command = `echo ${passwd} | sudo -S podman run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=ui --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenario`;
+      command = `echo ${passwd} | sudo -S podman run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenario`;
       break;
     case "time-scenarios":
-      command = `echo ${passwd} | sudo -S podman run --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=ui --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
+      command = `echo ${passwd} | sudo -S podman run --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
       break;
     default:
       command = `echo '${passwd}'`;
@@ -82,6 +95,7 @@ app.post("/start-kraken/", (req, res) => {
         id: stdout,
         status: "200",
       });
+      myInterval = setInterval(() => myFunc(req.body.params.name), 1000 * 9);
     } else if (stderr || err) {
       res.json({ message: stderr, status: "failed" });
     }
@@ -130,7 +144,7 @@ app.get("/getNamespaces", (req, res) => {
 });
 
 app.get("/removePod", (req, res) => {
-  const command = `${PODMAN} rm -f krkn`;
+  const command = `${PODMAN} rm -af`;
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
       res.json({ message: stdout });
@@ -158,6 +172,214 @@ app.get("/getPodmanStatus", (req, res) => {
     res.end();
   });
 });
+let sql = "";
+
+db.exec(`CREATE TABLE IF NOT EXISTS test (
+    id INTEGER PRIMARY KEY,
+    movie varchar(50),
+    quote varchar(50),
+    char varchar(50)
+  );`);
+
+// db.exec(`DROP TABLE config`);
+db.exec(`CREATE TABLE IF NOT EXISTS config (
+    id INTEGER PRIMARY KEY,
+    name varchar(50),
+    params json
+  );`);
+//db.exec(`DROP TABLE details`);
+db.exec(`CREATE TABLE IF NOT EXISTS details (
+    container_id varchar(250) PRIMARY KEY,
+    image varchar(150),
+    mounts varchar(100),
+    state varchar(20),
+    status varchar(10),
+    name varchar(50),
+    content TEXT
+  );`);
+
+app.post("/saveConfig", (req, res) => {
+  try {
+    const { name, params } = req.body.params;
+
+    sql = `INSERT INTO config(name, params) VALUES (?,?)`;
+    db.run(sql, [name, JSON.stringify(params)], (err) => {
+      if (err) {
+        console.log(err);
+        return res.json({ status: 300, message: "error", error: err });
+      }
+      console.log("successful insertion");
+      return res.json({
+        status: 200,
+        message: "Config saved successfully",
+      });
+    });
+  } catch (error) {
+    return res.json({
+      status: 400,
+      message: false,
+    });
+  }
+});
+
+app.get("/getConfig", (req, res) => {
+  try {
+    sql = `SELECT * FROM config`;
+    db.all(sql, [], (err, rows) => {
+      if (err) {
+        return res.json({ status: 300, message: "error", error: err });
+      }
+
+      return res.json({
+        status: 200,
+        message: rows,
+      });
+    });
+  } catch (error) {
+    return res.json({
+      status: 400,
+      message: false,
+    });
+  }
+});
+app.get("/getResults", (req, res) => {
+  try {
+    sql = `SELECT * FROM details`;
+    db.all(sql, [], (err, rows) => {
+      if (err) {
+        return res.json({ status: 300, message: "error", error: err });
+      }
+
+      return res.json({
+        status: 200,
+        message: rows,
+      });
+    });
+  } catch (error) {
+    return res.json({
+      status: 400,
+      message: false,
+    });
+  }
+});
+app.post("/deleteConfig", (req, res) => {
+  try {
+    sql = `DELETE FROM config WHERE id=(?)`;
+    db.run(sql, [req.body.params], (err) => {
+      if (err) {
+        console.log(err);
+        return res.json({ status: 300, message: "error", error: err });
+      }
+      return res.json({
+        status: 200,
+        message: "Deleted!",
+      });
+    });
+  } catch (error) {
+    return res.json({
+      status: 400,
+      message: false,
+    });
+  }
+});
+const frame = async (status, podName) => {
+  if (status === "exited") {
+    clearInterval(myInterval);
+    await saveLogs(podName);
+  }
+};
+const myFunc = (podName) => {
+  const command = `${PODMAN} inspect ${podName} --format "{{.State.Status}}"`;
+
+  child_process.exec(command, (err, stdout, stderr) => {
+    if (stdout) {
+      frame(stdout.trim(), podName);
+    } else if (stderr || err) {
+      return console.log("error");
+    }
+  });
+};
+const savePodDetails = (podName, fileContent) => {
+  const command = `${PODMAN} inspect ${podName} `;
+  child_process.exec(command, (err, stdout, stderr) => {
+    if (stdout) {
+      sql = `INSERT INTO details(container_id, image, mounts, state, status, name, content) VALUES (?,?,?,?,?,?,?)`;
+      const d = JSON.parse(stdout);
+
+      db.run(
+        sql,
+        [
+          d[0].Id,
+          d[0].ImageName,
+          d[0].Mounts[0].Destination,
+          d[0].State.Status,
+          d[0].State.ExitCode,
+          d[0].Name,
+          fileContent,
+        ],
+        (err) => {
+          if (err) {
+            console.log(err);
+            return;
+          }
+          console.log("successful insertion");
+        }
+      );
+    } else if (stderr || err) {
+      console.log(err);
+    }
+  });
+};
+
+const saveLogs = (podName) => {
+  const command = `${PODMAN} logs -f ${podName}  |& tee -a ${podName}_logs.log`;
+  child_process.exec(command, (err, stdout, stderr) => {
+    if (stdout) {
+      fs.readFile(`${podName}_logs.log`, "utf8", (err, data) => {
+        if (err) {
+          console.error("Error reading file:", err);
+          return;
+        }
+
+        // Call function to store in SQLite database
+
+        savePodDetails(podName, data);
+      });
+    } else if (stderr) {
+      return console.log("cannot save logs error");
+    }
+  });
+};
+
+app.post("/downloadLogs", (req, res) => {
+  const fileId = req.body.params.container;
+  // Query the database to retrieve file data based on fileId
+  db.get(
+    "SELECT content FROM details WHERE container_id = ?",
+    [fileId],
+    (err, row) => {
+      if (err) {
+        console.error("Error querying database:", err);
+        res.status(500).send("Internal server error");
+        return;
+      }
+      if (!row) {
+        res.status(404).send("File not found");
+        return;
+      }
+
+      // Set the appropriate headers
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=" + "sample.log"
+      );
+      res.setHeader("Content-Type", "application/octet-stream");
+
+      // Send the file data as a response
+      res.status(200).send(row.content);
+    }
+  );
+});
 
 const storage = multer.diskStorage({
   destination: uploadFilePath,
@@ -167,8 +389,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 const uploadFiles = (req, res) => {
-  console.log(req.body);
-  console.log(req.file);
   res.json({ status: "200", message: "Successfully uploaded the file" });
 };
 
@@ -195,13 +415,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("logs", () => {
-    const command = `${PODMAN} logs -f krkn`;
-    const ls = child_process.exec(command);
-    ls.stdout.on("data", (data) => {
-      socket.emit("logs", data);
-    });
-    ls.stderr.on("data", (data) => {
-      socket.emit("logs", data);
+    const parent = `${PODMAN} ps -a --format "{{.Names}}"`;
+    const vs = child_process.exec(parent);
+    vs.stdout.on("data", (data) => {
+      const command = `${PODMAN} logs -f ${data}`;
+      const ls = child_process.exec(command);
+      ls.stdout.on("data", (data) => {
+        socket.emit("logs", data);
+      });
+      ls.stderr.on("data", (data) => {
+        socket.emit("logs", data);
+      });
     });
   });
   socket.on("podStatus", () => {

@@ -9,6 +9,14 @@ export const paramsList = {
       isRequired: false,
     },
     {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
+    },
+    {
       key: "namespace",
       label: "Namespace",
       fieldId: "namespace-id",
@@ -76,6 +84,14 @@ export const paramsList = {
       isRequired: false,
     },
     {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
+    },
+    {
       key: "namespace",
       label: "Namespace",
       fieldId: "namespace-id",
@@ -133,6 +149,14 @@ export const paramsList = {
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
       isRequired: false,
+    },
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
     },
     {
       key: "action",
@@ -194,6 +218,14 @@ export const paramsList = {
       isRequired: false,
     },
     {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
+    },
+    {
       key: "namespace",
       label: "Namespace",
       fieldId: "namespace-id",
@@ -219,6 +251,14 @@ export const paramsList = {
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
       isRequired: false,
+    },
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
     },
     {
       key: "pvc_name",
@@ -269,6 +309,14 @@ export const paramsList = {
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
       isRequired: false,
+    },
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
     },
     {
       key: "object_type",
@@ -329,6 +377,14 @@ export const paramsList = {
       isRequired: false,
     },
     {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
+    },
+    {
       key: "shutdown_duration",
       label: "SHUTDOWN_DURATION",
       fieldId: "shutdown_duration-id",
@@ -361,6 +417,14 @@ export const paramsList = {
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
       isRequired: false,
+    },
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
     },
     {
       key: "total_chaos_duration",
@@ -412,6 +476,14 @@ export const paramsList = {
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
       isRequired: false,
+    },
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
     },
     {
       key: "total_chaos_duration",
@@ -471,6 +543,14 @@ export const paramsList = {
       ariaDescribedby: "kubeconfig-path",
       helperText: "",
       isRequired: false,
+    },
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
     },
     {
       key: "total_chaos_duration",
