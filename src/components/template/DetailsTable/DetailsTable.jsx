@@ -69,22 +69,6 @@ const DetailsTable = () => {
                       <PODStatus pod_status={podDetails.ExitCode} />
                     )}
                   </Td>
-                  {/* <Td className="state-class">
-                    <Label
-                      className="run-class"
-                      variant="outline"
-                      color={"blue"}
-                      icon={<SyncAltIcon />}
-                    >
-                      RUNNING
-                    </Label>
-                  </Td>
-                  <Td>
-                    {" "}
-                    <div className="flash-box">
-                      <div className="dot-flashing"></div>
-                    </div>
-                  </Td> */}
                 </Tr>
               </Tbody>
             </Table>

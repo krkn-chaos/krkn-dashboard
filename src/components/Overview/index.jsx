@@ -19,7 +19,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 
 import Cookies from "universal-cookie";
-import DetailsTable from "../template/DetailsTable";
+import DetailsTable from "../template/DetailsTable/DetailsTable";
 import LogsUI from "./LogsUI";
 import NewExperiment from "@/components/NewExperiment";
 import RootPasswordModal from "@/components/molecules/PasswordModal";
