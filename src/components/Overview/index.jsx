@@ -52,7 +52,7 @@ const Overview = () => {
     }
   };
   useEffect(() => {
-    const socketInstance = socketIOClient.io("http://localhost:8000", {
+    const socketInstance = socketIOClient.io("http://0.0.0.0:8000", {
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 4000,

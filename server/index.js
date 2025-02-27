@@ -160,7 +160,7 @@ app.get("/removePod", (req, res) => {
 });
 
 app.get("/getPodmanStatus", (req, res) => {
-  const command = `podman-remote -v`;
+  const command = `${PODMAN} -v`;
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
       const version = stdout.split(" ")[2];
@@ -402,11 +402,14 @@ app.post(
   handleFileUploadError
 );
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server listening on ${PORT}`);
 });
 
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+  cors: { origin: "*" },
+  methods: ["GET", "POST"],
+});
 
 io.on("connection", (socket) => {
   console.log("Connection established");
