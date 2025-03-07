@@ -113,7 +113,6 @@ const Overview = () => {
               </Card>
             </div>
           </Tab>
-
           <Tab eventKey={1} title={<TabTitleText>Logs</TabTitleText>}>
             <LogsUI />
           </Tab>
