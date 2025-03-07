@@ -27,6 +27,10 @@ import ScenariosCard from "@/components/template/ScenariosCard";
 import socketIOClient from "socket.io-client";
 import { useInterval } from "@/utils/hooks";
 
+const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+const wsHost = window.location.hostname;
+const wsPort = 8000;
+
 const Overview = () => {
   const dispatch = useDispatch();
 
@@ -52,16 +56,19 @@ const Overview = () => {
     }
   };
   useEffect(() => {
-    const socketInstance = socketIOClient.io("http://0.0.0.0:8000", {
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 4000,
-      reconnectionDelayMax: 5000,
-      transports: ["websocket"],
-      extraHeaders: {
-        passwd: passwd,
-      },
-    });
+    const socketInstance = socketIOClient.io(
+      `${wsProtocol}://${wsHost}:${wsPort}`,
+      {
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 4000,
+        reconnectionDelayMax: 5000,
+        transports: ["websocket"],
+        extraHeaders: {
+          passwd: passwd,
+        },
+      }
+    );
     setSocket(socketInstance);
     dispatch(setSocketInstance(socketInstance));
 
