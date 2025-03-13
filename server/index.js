@@ -402,7 +402,7 @@ app.post(
   handleFileUploadError
 );
 
-const server = app.listen(PORT, "0.0.0.0", () => {
+const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
 });
 
@@ -421,7 +421,7 @@ io.on("connection", (socket) => {
     const parent = `${PODMAN} ps -a --format "{{.Names}}"`;
     const vs = child_process.exec(parent);
     vs.stdout.on("data", (data) => {
-      const command = `${PODMAN} logs -f ${data}`;
+      const command = `${PODMAN} logs -f ${data} | jq '.'`;
       const ls = child_process.exec(command);
       ls.stdout.on("data", (data) => {
         socket.emit("logs", data);

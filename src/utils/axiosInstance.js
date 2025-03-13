@@ -1,10 +1,14 @@
 import Cookies from "universal-cookie";
 import axios from "axios";
-// import store from "store/store";
 
-// const { getState } = store;
+export const getUrl = () => {
+  const { hostname, protocol } = window.location;
+  return hostname === "localhost"
+    ? "http://localhost:8000"
+    : `${protocol}//${hostname}:8000`;
+};
 
-const baseURL = "http://localhost:8000";
+const baseURL = getUrl();
 
 const axiosInstance = axios.create({ responseType: "json", baseURL });
 
