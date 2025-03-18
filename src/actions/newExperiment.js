@@ -8,7 +8,7 @@ import { showToast } from "./toastActions";
 export const startKraken = (data) => async (dispatch, getState) => {
   try {
     dispatch({ type: TYPES.LOADING });
-    dispatch(removePod());
+    // dispatch(removePod());
     const { kubeConfigFile } = getState().experiment;
     if (kubeConfigFile) {
       data["isFileUpload"] = true;
@@ -73,32 +73,59 @@ export const getPodStatus = (data) => async (dispatch) => {
   }
 };
 
+export const logsFunc = (activePod) => async (dispatch, getState) => {
+  const { socketInstance } = getState().experiment;
+
+  if (!socketInstance) {
+    throw new Error("Socket instance not available");
+  }
+
+  // Emit logs request
+  socketInstance.emit("logs", activePod);
+
+  socketInstance.off("logs");
+  socketInstance.on("logs", (data) => {
+    console.log(data);
+    dispatch(getLogs(data));
+  });
+};
+
 export const getLogs = (data) => async (dispatch) => {
   try {
     dispatch({ type: TYPES.LOADING });
+
+    let logs = (data.error || data).toString().replace(/\n/g, "<br/>");
+    logs += "<br/>";
     dispatch({
       type: TYPES.SET_LOGS,
-      payload: {
-        logs: data.toString().replaceAll(/\n/g, "<br />"),
-        errorLogs: data,
-      },
+      payload: { logs, errorLogs: data },
     });
   } catch (error) {
     dispatch(showToast("danger", "Something went wrong", "Try again later"));
+  } finally {
+    dispatch({ type: TYPES.COMPLETED });
   }
-
-  dispatch({ type: TYPES.COMPLETED });
 };
 
 export const getPodDetails = () => async (dispatch, getState) => {
   try {
     const { socketInstance } = getState().experiment;
+    if (!socketInstance) {
+      throw new Error("Socket instance not available");
+    }
     socketInstance.emit("podStatus");
+    // Remove existing listener to prevent duplicate subscriptions
+    socketInstance.off("podStatus");
+
     socketInstance.on("podStatus", (data) => {
-      dispatch({
-        type: TYPES.SET_POD_DETAILS,
-        payload: data[0],
-      });
+      if (data?.length > 0) {
+        dispatch({
+          type: TYPES.SET_POD_DETAILS,
+          payload: data,
+        });
+      } else {
+        console.warn("Received empty podStatus data");
+      }
     });
   } catch (error) {
     dispatch(showToast("danger", "Something went wrong", "Try again later"));

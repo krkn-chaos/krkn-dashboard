@@ -62,7 +62,7 @@ const MenuOptions = () => {
               <NavItem
                 key={option.key}
                 itemId={option.id}
-                isActive={activeMenuItem === option.id}
+                isActive={activeMenuItem === option.key}
                 onClick={() => navigate(option.key)}
               >
                 {option.displayName}
