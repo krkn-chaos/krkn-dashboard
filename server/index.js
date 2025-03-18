@@ -1,6 +1,7 @@
 // server/index.js
 import * as path from "path";
 
+import AnsiToHtml from "ansi-to-html";
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
@@ -15,6 +16,7 @@ import sqlite3 from "sqlite3";
 sqlite3.verbose();
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
+const ansiToHtml = new AnsiToHtml();
 
 const databaseDirectory = __dirname + "/../database/krkn.db";
 const db = new sqlite3.Database(
@@ -117,17 +119,31 @@ app.get("/getPodStatus", (req, res) => {
 });
 
 app.get("/getPodDetails", (req, res) => {
-  const command = `${PODMAN} ps -a --format=json`;
+  const command = `${PODMAN} ps -a --format json`;
+
   child_process.exec(command, (err, stdout, stderr) => {
-    if (stdout) {
-      res.write(stdout, "", () => {
-        console.log("Writing Pod Details...");
-      });
-      res.end("");
-    } else if (stderr) {
-      res.json({ message: stderr, status: "failed" });
-    } else if (err) {
-      res.json({ message: err, status: "failed" });
+    if (err) {
+      console.error("Exec error:", err);
+      return res.status(500).json({ message: err.message, status: "failed" });
+    }
+
+    if (stderr) {
+      console.error("Command stderr:", stderr);
+      return res.status(500).json({ message: stderr, status: "failed" });
+    }
+
+    try {
+      const podData = JSON.parse(stdout);
+      const filteredPods = podData.filter((pod) =>
+        pod.Image.includes("krkn-hub")
+      );
+
+      res.json({ status: "success", data: filteredPods });
+    } catch (parseError) {
+      console.error("JSON Parse Error:", parseError);
+      res
+        .status(500)
+        .json({ message: "Invalid JSON output", status: "failed" });
     }
   });
 });
@@ -417,28 +433,54 @@ io.on("connection", (socket) => {
     console.log("Disconnected");
   });
 
-  socket.on("logs", () => {
-    const parent = `${PODMAN} ps -a --format "{{.Names}}"`;
-    const vs = child_process.exec(parent);
-    vs.stdout.on("data", (data) => {
-      const command = `${PODMAN} logs -f ${data} | jq '.'`;
-      const ls = child_process.exec(command);
-      ls.stdout.on("data", (data) => {
-        socket.emit("logs", data);
-      });
-      ls.stderr.on("data", (data) => {
-        socket.emit("logs", data);
-      });
+  socket.on("logs", (activePod) => {
+    const ls = child_process.spawn(PODMAN, ["logs", "-f", activePod]);
+
+    ls.stdout.on("data", (data) => {
+      console.log(data.toString());
+
+      socket.emit("logs", ansiToHtml.toHtml(data.toString())); // Send logs as they arrive
+    });
+
+    ls.stderr.on("data", (data) => {
+      console.error("Error:", data.toString());
+      socket.emit("logs", { error: data.toString() });
+    });
+
+    ls.on("close", (code) => {
+      console.log(`Process exited with code ${code}`);
     });
   });
   socket.on("podStatus", () => {
-    const command = `${PODMAN} ps -a --format=json`;
-    const ls = child_process.exec(command);
-    ls.stdout.on("data", (data) => {
-      socket.emit("podStatus", JSON.parse(data));
-    });
-    ls.stderr.on("data", (data) => {
-      socket.emit("podStatus", data);
+    const command = `${PODMAN} ps -a --format json`;
+
+    child_process.exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error("Exec error:", error);
+        socket.emit("podStatus", { error: "Failed to fetch pod details" });
+        return;
+      }
+
+      if (stderr) {
+        console.error("Command stderr:", stderr);
+        socket.emit("podStatus", { error: stderr });
+        return;
+      }
+
+      try {
+        // Parse JSON output from podman
+        const podData = JSON.parse(stdout);
+
+        // Filter only pods whose image contains "krkn-hub"
+        const filteredPods = podData.filter((pod) =>
+          pod.Image.includes("krkn-hub")
+        );
+
+        socket.emit("podStatus", filteredPods);
+      } catch (parseError) {
+        console.error("JSON Parse Error:", parseError);
+        socket.emit("podStatus", { error: "Invalid JSON output" });
+      }
     });
   });
 });

@@ -11,8 +11,6 @@ import {
 import React, { useEffect, useState } from "react";
 import {
   checkForRootPassword,
-  emptyLogs,
-  getLogs,
   getPodDetails,
   setSocketInstance,
 } from "@/actions/newExperiment";
@@ -35,10 +33,9 @@ const Overview = () => {
   const dispatch = useDispatch();
 
   const [activeTabKey, setActiveTabKey] = useState(0);
+  const [pollingInterval, setPollingInterval] = useState(6000);
 
-  const [socket, setSocket] = useState(null);
-
-  const { isPodmanInstalled, podDetails } = useSelector(
+  const { isPodmanInstalled, podDetailsList } = useSelector(
     (state) => state.experiment
   );
 
@@ -47,13 +44,6 @@ const Overview = () => {
 
   const handleTabClick = (_event, tabIndex) => {
     setActiveTabKey(tabIndex);
-    if (tabIndex === 1) {
-      dispatch(emptyLogs());
-      socket.emit("logs", passwd);
-      socket.on("logs", (data) => {
-        dispatch(getLogs(data));
-      });
-    }
   };
   useEffect(() => {
     const socketInstance = socketIOClient.io(
@@ -69,7 +59,7 @@ const Overview = () => {
         },
       }
     );
-    setSocket(socketInstance);
+
     dispatch(setSocketInstance(socketInstance));
 
     if (isPodmanInstalled) {
@@ -85,14 +75,20 @@ const Overview = () => {
     };
   }, [dispatch, isPodmanInstalled]);
 
-  useInterval(
-    () => {
-      if (isPodmanInstalled && passwd) {
-        dispatch(getPodDetails());
-      }
-    },
-    podDetails?.State !== "exited" ? 6000 : null
-  );
+  useEffect(() => {
+    const runningPods = podDetailsList.filter(
+      (item) => item.State !== "exited"
+    );
+
+    setPollingInterval(runningPods.length > 0 ? 6000 : null);
+  }, [podDetailsList]);
+
+  useInterval(() => {
+    if (isPodmanInstalled && passwd) {
+      dispatch(getPodDetails());
+    }
+  }, pollingInterval);
+
   return (
     <div className="overview-wrapper">
       <Card className="overview-card">

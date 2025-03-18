@@ -4,7 +4,7 @@ const initialState = {
   container_id: "",
   pod_status: null,
   logs: "",
-  podDetails: null,
+  podDetailsList: [],
   scenarioChecked: "container-scenarios",
   isRootModalOpen: false,
   namsespaces: [],
@@ -17,41 +17,42 @@ const initialState = {
 };
 
 const experimentReducer = (state = initialState, action) => {
-  switch (action.type) {
+  const { type, payload } = action;
+  switch (type) {
     case TYPES.SET_DATA:
-      return { ...state, container_id: action.payload.id };
+      return { ...state, container_id: payload.id };
     case TYPES.SET_POD_STATUS:
-      return { ...state, pod_status: action.payload };
+      return { ...state, pod_status: payload };
     case TYPES.SET_LOGS:
       return {
         ...state,
-        logs: state.logs.concat(action.payload.logs),
+        logs: state.logs.concat(payload.logs),
       };
     case TYPES.EMPTY_LOGS:
       return { ...state, logs: "" };
     case TYPES.SET_POD_DETAILS:
-      return { ...state, podDetails: action.payload };
+      return { ...state, podDetailsList: payload };
     case TYPES.CHECK_SCENARIO:
-      return { ...state, scenarioChecked: action.payload };
+      return { ...state, scenarioChecked: payload };
     case TYPES.TOGGLE_ROOT_MODAL:
-      return { ...state, isRootModalOpen: action.payload };
+      return { ...state, isRootModalOpen: payload };
     case TYPES.SET_NAMESPACES:
       return {
         ...state,
-        namsespaces: action.payload,
+        namsespaces: payload,
       };
     case TYPES.GET_PODMAN_STATUS:
-      return { ...state, isPodmanInstalled: action.payload };
+      return { ...state, isPodmanInstalled: payload };
     case TYPES.SET_SOCKET_INSTANCE:
-      return { ...state, socketInstance: action.payload };
+      return { ...state, socketInstance: payload };
     case TYPES.FILE_CONTENT:
-      return { ...state, kubeConfigFile: action.payload };
+      return { ...state, kubeConfigFile: payload };
     case TYPES.SAVE_CONFIG_DATA:
-      return { ...state, configData: action.payload };
+      return { ...state, configData: payload };
     case TYPES.SET_CONFIG_DATA:
-      return { ...state, configDataArr: action.payload };
+      return { ...state, configDataArr: payload };
     case TYPES.SET_RESULTS:
-      return { ...state, results: action.payload };
+      return { ...state, results: payload };
     default:
       return state;
   }

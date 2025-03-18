@@ -27,3 +27,6 @@ export const FILE_CONTENT = "FILE_CONTENT";
 export const SAVE_CONFIG_DATA = "SAVE_CONFIG_DATA";
 export const SET_CONFIG_DATA = "SET_CONFIG_DATA";
 export const SET_RESULTS = "SET_RESULTS";
+
+/* Logs */
+export const SET_SELECTED_POD = "SET_SELECTED_POD";
