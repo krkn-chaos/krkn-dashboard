@@ -1,7 +1,7 @@
 import "./index.less";
 
 import { Outlet, useNavigate } from "react-router-dom";
-import { Page, PageSection, PageSectionVariants } from "@patternfly/react-core";
+import { Page, PageSection } from "@patternfly/react-core";
 
 import Header from "@/components/organisms/Header";
 import LoadingComponent from "@/components/organisms/LoadingComponent";
@@ -16,7 +16,7 @@ const MainLayout = () => {
     <>
       {alerts && alerts.length > 0 && <ToastComponent />}
       <Page header={<Header />} sidebar={<SideMenu />}>
-        <PageSection variant={PageSectionVariants.light} isCenterAligned>
+        <PageSection isCenterAligned>
           <LoadingComponent>
             <Outlet context={navigate} />
           </LoadingComponent>

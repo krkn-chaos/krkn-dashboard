@@ -25,12 +25,12 @@ const sideMenuOptions = [
     displayName: "Results",
     icon: <CatalogIcon />,
   },
-  {
-    id: 3,
-    key: "archives",
-    displayName: "Archives",
-    icon: <CatalogIcon />,
-  },
+  // {
+  //   id: 3,
+  //   key: "archives",
+  //   displayName: "Archives",
+  //   icon: <CatalogIcon />,
+  // },
 ];
 
 const MenuOptions = () => {

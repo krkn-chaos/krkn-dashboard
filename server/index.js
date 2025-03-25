@@ -222,7 +222,11 @@ app.post("/saveConfig", (req, res) => {
     db.run(sql, [name, JSON.stringify(params)], (err) => {
       if (err) {
         console.log(err);
-        return res.json({ status: 300, message: "error", error: err });
+        return res.json({
+          status: 300,
+          message: "error inserting params",
+          error: err,
+        });
       }
       console.log("successful insertion");
       return res.json({
@@ -243,7 +247,11 @@ app.get("/getConfig", (req, res) => {
     sql = `SELECT * FROM config`;
     db.all(sql, [], (err, rows) => {
       if (err) {
-        return res.json({ status: 300, message: "error", error: err });
+        return res.json({
+          status: 300,
+          message: "error geting the config",
+          error: err,
+        });
       }
 
       return res.json({
@@ -263,7 +271,11 @@ app.get("/getResults", (req, res) => {
     sql = `SELECT * FROM details`;
     db.all(sql, [], (err, rows) => {
       if (err) {
-        return res.json({ status: 300, message: "error", error: err });
+        return res.json({
+          status: 300,
+          message: "error getting details",
+          error: err,
+        });
       }
 
       return res.json({
@@ -305,13 +317,20 @@ const frame = async (status, podName) => {
   }
 };
 const myFunc = (podName) => {
+  console.log("im here myfunc");
   const command = `${PODMAN} inspect ${podName} --format "{{.State.Status}}"`;
 
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
       frame(stdout.trim(), podName);
     } else if (stderr || err) {
-      return console.log("error");
+      if (err) {
+        console.log(err);
+      }
+      if (stderr) {
+        console.log(stderr);
+      }
+      return console.log("error in myFunc");
     }
   });
 };
