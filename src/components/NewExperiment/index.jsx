@@ -6,6 +6,8 @@ import {
   CardBody,
   Form,
   FormGroup,
+  Grid,
+  GridItem,
   TextInput,
   Title,
 } from "@patternfly/react-core";
@@ -140,32 +142,39 @@ const NewExperiment = () => {
               labelOff="Cerberus Disabled"
             />
           </div>*/}
-          <KubeconfigFileUpload />
-          <div>or</div>
 
-          {scenarioChecked &&
-            paramsList[scenarioChecked].map((item) => {
-              return (
-                <FormGroup
-                  key={item.key}
-                  isRequired={item.isRequired}
-                  label={item.label}
-                  fieldId={item.fieldId}
-                  helperText={item.helperText}
-                >
-                  <TextInput
-                    isRequired={item.isRequired}
-                    type="text"
-                    id={item.fieldId}
-                    name={item.key}
-                    value={data[scenarioChecked][item.key]}
-                    aria-describedby={item.ariaDescribedby}
-                    onChange={(evt, val) => changeHandler(evt, val, item.key)}
-                  />
-                </FormGroup>
-              );
-            })}
-
+          <Grid hasGutter>
+            <GridItem span={6}>
+              <FormGroup isRequired={false} label={"KUBECONFIG FILE"}>
+                <KubeconfigFileUpload />
+              </FormGroup>
+            </GridItem>
+            {scenarioChecked &&
+              paramsList[scenarioChecked].map((item) => {
+                return (
+                  <GridItem span={6} key={item.key}>
+                    <FormGroup
+                      isRequired={item.isRequired}
+                      label={item.label}
+                      fieldId={item.fieldId}
+                      helperText={item.helperText}
+                    >
+                      <TextInput
+                        isRequired={item.isRequired}
+                        type="text"
+                        id={item.fieldId}
+                        name={item.key}
+                        value={data[scenarioChecked][item.key]}
+                        aria-describedby={item.ariaDescribedby}
+                        onChange={(evt, val) =>
+                          changeHandler(evt, val, item.key)
+                        }
+                      />
+                    </FormGroup>
+                  </GridItem>
+                );
+              })}
+          </Grid>
           <ActionGroup className="action-group-wrapper">
             <TextButton
               variant="primary"
