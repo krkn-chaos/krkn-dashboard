@@ -9,9 +9,10 @@ import {
   GridItem,
 } from "@patternfly/react-core";
 import React, { useEffect } from "react";
-import { deleteConfig, getConfig } from "@/actions/newExperiment";
+import { deleteConfig, downloadLogs, getConfig } from "@/actions/newExperiment";
 import { useDispatch, useSelector } from "react-redux";
 
+import { DownloadIcon } from "@patternfly/react-icons";
 import { TrashIcon } from "@patternfly/react-icons";
 import { uid } from "@/actions/toastActions.js";
 
@@ -41,21 +42,36 @@ const Experiments = () => {
             <CardBody>
               <Grid hasGutter>
                 {Object.keys(parseParams(data.params)).map((item) => {
-                  if (item !== "kubeconfig" && item !== "isFileUpload") {
+                  if (
+                    item !== "kubeconfigPath" &&
+                    item !== "kubeconfig" &&
+                    item !== "isFileUpload"
+                  ) {
                     return (
-                      <GridItem span={3} key={uid()}>
-                        <span
-                          style={{ fontWeight: "bold", paddingRight: "10px" }}
-                        >
-                          {item === "scenarioChecked" ? "scenario" : item}:
-                        </span>
-                        <span>{parseParams(data.params)[item]}</span>
-                      </GridItem>
+                      <>
+                        <GridItem span={3} key={uid()}>
+                          <span
+                            style={{ fontWeight: "bold", paddingRight: "10px" }}
+                          >
+                            {item === "scenarioChecked" ? "scenario" : item}:
+                          </span>
+                          <span>{parseParams(data.params)[item]}</span>
+                        </GridItem>
+                      </>
                     );
                   }
                   return null;
                 })}
               </Grid>
+              <Button
+                className="download-logs"
+                variant="link"
+                icon={<DownloadIcon />}
+                iconPosition="end"
+                onClick={() => dispatch(downloadLogs(data.name))}
+              >
+                Logs
+              </Button>
             </CardBody>
           </Card>
         ))}

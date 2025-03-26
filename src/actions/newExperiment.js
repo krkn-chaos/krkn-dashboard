@@ -85,7 +85,7 @@ export const logsFunc = (activePod) => async (dispatch, getState) => {
 
   socketInstance.off("logs");
   socketInstance.on("logs", (data) => {
-    console.log(data);
+    //console.log(data);
     dispatch(getLogs(data));
   });
 };
@@ -249,29 +249,28 @@ export const getDetails = () => async (dispatch) => {
     dispatch(showToast("danger", "Something went wrong", "Try again later"));
   }
 };
-export const downloadLogs =
-  (containerId, containerName) => async (dispatch) => {
-    try {
-      dispatch({ type: TYPES.LOADING });
-      const response = await API.post("/downloadLogs", {
-        params: {
-          container: containerId,
-        },
-      });
-      if (response.status === 200) {
-        const blob = await response.data;
-        const url = window.URL.createObjectURL(new Blob([blob]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", `${containerName}.log`); // Change this if your file has a different name
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-      }
-    } catch {
-      dispatch(
-        showToast("danger", "Error in downloading logs", "Try again later")
-      );
+export const downloadLogs = (containerName) => async (dispatch) => {
+  try {
+    dispatch({ type: TYPES.LOADING });
+    const response = await API.post("/downloadLogs", {
+      params: {
+        container: containerName,
+      },
+    });
+    if (response.status === 200) {
+      const blob = await response.data;
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${containerName}.log`); // Change this if your file has a different name
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
     }
-    dispatch({ type: TYPES.COMPLETED });
-  };
+  } catch {
+    dispatch(
+      showToast("danger", "Error in downloading logs", "Try again later")
+    );
+  }
+  dispatch({ type: TYPES.COMPLETED });
+};

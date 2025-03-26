@@ -203,7 +203,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS config (
     name varchar(50),
     params json
   );`);
-//db.exec(`DROP TABLE details`);
+// db.exec(`DROP TABLE details`);
 db.exec(`CREATE TABLE IF NOT EXISTS details (
     container_id varchar(250) PRIMARY KEY,
     image varchar(150),
@@ -387,33 +387,26 @@ const saveLogs = (podName) => {
 };
 
 app.post("/downloadLogs", (req, res) => {
-  const fileId = req.body.params.container;
-  // Query the database to retrieve file data based on fileId
-  db.get(
-    "SELECT content FROM details WHERE container_id = ?",
-    [fileId],
-    (err, row) => {
+  const podName = req.body.params.container;
+  const logFilePath = path.join(__dirname, "podman-logs.txt");
+
+  const podmanProcess = child_process.spawn("podman", ["logs", "-f", podName]);
+
+  const logStream = fs.createWriteStream(logFilePath, { flags: "w" });
+
+  podmanProcess.stdout.on("data", (data) => logStream.write(data));
+  podmanProcess.stderr.on("data", (data) => logStream.write(data));
+
+  podmanProcess.on("close", () => {
+    logStream.end();
+    res.download(logFilePath, "podman-logs.txt", (err) => {
       if (err) {
-        console.error("Error querying database:", err);
-        res.status(500).send("Internal server error");
-        return;
+        res.status(500).json({ error: "Failed to send file" });
       }
-      if (!row) {
-        res.status(404).send("File not found");
-        return;
-      }
+    });
+  });
 
-      // Set the appropriate headers
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=" + "sample.log"
-      );
-      res.setHeader("Content-Type", "application/octet-stream");
-
-      // Send the file data as a response
-      res.status(200).send(row.content);
-    }
-  );
+  setTimeout(() => podmanProcess.kill(), 6000);
 });
 
 const storage = multer.diskStorage({
@@ -453,12 +446,35 @@ io.on("connection", (socket) => {
   });
 
   socket.on("logs", (activePod) => {
-    const ls = child_process.spawn(PODMAN, ["logs", "-f", activePod]);
+    const ls = child_process.spawn("podman", ["logs", "-f", activePod]);
+
+    // ls.stdout.on("data", (data) => {
+    //   const logLines = data.toString().split("\n");
+
+    //   logLines.forEach((line) => {
+    //     if (line.trim()) {
+    //       try {
+    //         const parsedJson = JSON.parse(line);
+    //         socket.emit("logs", JSON.stringify(parsedJson, null, 2));
+    //       } catch (error) {
+    //         socket.emit("logs", ansiToHtml.toHtml(line));
+    //       }
+    //     }
+    //   });
+    // });
+    let logBuffer = ""; // Buffer to store incomplete JSON logs
 
     ls.stdout.on("data", (data) => {
-      console.log(data.toString());
+      logBuffer += data.toString(); // Append new logs
 
-      socket.emit("logs", ansiToHtml.toHtml(data.toString())); // Send logs as they arrive
+      try {
+        // Try parsing as JSON
+        const parsedJson = JSON.parse(logBuffer);
+        socket.emit("logs", JSON.stringify(parsedJson, null, 2)); // Send formatted JSON
+        logBuffer = ""; // Clear buffer after successful parsing
+      } catch (error) {
+        // If JSON is incomplete, do nothing (wait for more chunks)
+      }
     });
 
     ls.stderr.on("data", (data) => {

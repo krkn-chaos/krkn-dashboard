@@ -74,7 +74,7 @@ const Results = () => {
                   )}
                 </Td>
                 <Td>
-                  <Button
+                  {/* <Button
                     variant="link"
                     icon={<DownloadIcon />}
                     iconPosition="end"
@@ -85,7 +85,7 @@ const Results = () => {
                     }
                   >
                     Logs
-                  </Button>{" "}
+                  </Button>{" "} */}
                 </Td>
               </Tr>
             ))}
