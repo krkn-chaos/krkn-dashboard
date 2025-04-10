@@ -86,6 +86,7 @@ const NewExperiment = () => {
       namespace: "",
       pod_label: "",
       name: "",
+      scenarioChecked: "node-scenarios",
     },
     "pvc-scenarios": {
       kubeconfigPath: "",
@@ -95,6 +96,7 @@ const NewExperiment = () => {
       fill_percentage: 50,
       duration: 60,
       name: "",
+      scenarioChecked: "pvc-scenarios",
     },
     "time-scenarios": {
       kubeconfigPath: "",
@@ -105,6 +107,7 @@ const NewExperiment = () => {
       container_name: "",
       namespace: "",
       name: "",
+      scenarioChecked: "time-scenarios",
     },
   });
 
@@ -116,6 +119,7 @@ const NewExperiment = () => {
         [key]: value,
       },
     }));
+    console.log(scenarioChecked);
     checkBtnDisabled();
   };
   const checkBtnDisabled = () => {
@@ -125,6 +129,7 @@ const NewExperiment = () => {
     setIsBtnDisabled(!isFull);
   };
   const sendData = async () => {
+    console.log(scenarioChecked);
     await dispatch(startKraken(data[scenarioChecked]));
   };
 

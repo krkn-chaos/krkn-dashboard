@@ -16,5 +16,6 @@ export default defineConfig({
     port: 3000,
     open: false,
     host: true,
+    allowedHosts: ["*.compute.amazonaws.com"],
   },
 });

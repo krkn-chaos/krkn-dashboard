@@ -1,7 +1,6 @@
 // server/index.js
 import * as path from "path";
 
-import AnsiToHtml from "ansi-to-html";
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
@@ -16,7 +15,6 @@ import sqlite3 from "sqlite3";
 sqlite3.verbose();
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
-const ansiToHtml = new AnsiToHtml();
 
 const databaseDirectory = __dirname + "/../database/krkn.db";
 const db = new sqlite3.Database(
@@ -51,7 +49,6 @@ if (process.env.CONTAINER_BUILD) {
   PODMAN = "podman";
 }
 app.post("/start-kraken/", (req, res) => {
-  const passwd = req.headers?.authorization?.split(" ")[1];
   const scenario = req.body.params.scenarioChecked;
   let kubeConfigPath = "";
 
@@ -81,25 +78,33 @@ app.post("/start-kraken/", (req, res) => {
       command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-memory-hog`;
       break;
     case "pvc-scenarios":
-      command = `echo ${passwd} | sudo -S podman run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenario`;
+      command = `${PODMAN} run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenario`;
+      break;
+    case "node-scenarios":
+      command = `${PODMAN} run --name=${req.body.params.name} --net=host --env-host=true -v ${req.body.params.kubeconfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:node-scenarios`;
       break;
     case "time-scenarios":
-      command = `echo ${passwd} | sudo -S podman run --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
+      command = `${PODMAN} run --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
       break;
     default:
-      command = `echo '${passwd}'`;
+      command = `echo 'No scenario selected'`;
   }
   console.log(command);
   child_process.exec(command, (err, stdout, stderr) => {
-    if (stdout) {
-      res.json({
+    const isSuccess = !err && !stderr;
+
+    if (isSuccess) {
+      res.status(200).json({
         message: "Successfully created the container!",
-        id: stdout,
+        name: req.body.params.name,
         status: "200",
       });
       myInterval = setInterval(() => myFunc(req.body.params.name), 1000 * 9);
-    } else if (stderr || err) {
-      res.json({ message: stderr, status: "failed" });
+    } else {
+      res.status(500).json({
+        message: stderr || err?.message || "Unknown error",
+        status: "failed",
+      });
     }
   });
 });
