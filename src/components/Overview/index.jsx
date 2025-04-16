@@ -9,18 +9,12 @@ import {
   Title,
 } from "@patternfly/react-core";
 import React, { useEffect, useState } from "react";
-import {
-  checkForRootPassword,
-  getPodDetails,
-  setSocketInstance,
-} from "@/actions/newExperiment";
+import { getPodDetails, setSocketInstance } from "@/actions/newExperiment";
 import { useDispatch, useSelector } from "react-redux";
 
-import Cookies from "universal-cookie";
 import DetailsTable from "../template/DetailsTable/DetailsTable";
 import LogsUI from "./LogsUI";
 import NewExperiment from "@/components/NewExperiment";
-import RootPasswordModal from "@/components/molecules/PasswordModal";
 import ScenariosCard from "@/components/template/ScenariosCard";
 import socketIOClient from "socket.io-client";
 import { useInterval } from "@/utils/hooks";
@@ -39,9 +33,6 @@ const Overview = () => {
     (state) => state.experiment
   );
 
-  const cookies = new Cookies(null, { path: "/" });
-  const passwd = cookies.get("root-password");
-
   const handleTabClick = (_event, tabIndex) => {
     setActiveTabKey(tabIndex);
   };
@@ -54,18 +45,13 @@ const Overview = () => {
         reconnectionDelay: 4000,
         reconnectionDelayMax: 5000,
         transports: ["websocket"],
-        extraHeaders: {
-          passwd: passwd,
-        },
+        extraHeaders: {},
       }
     );
 
     dispatch(setSocketInstance(socketInstance));
 
     if (isPodmanInstalled) {
-      dispatch(checkForRootPassword(false));
-    }
-    if (isPodmanInstalled && passwd) {
       dispatch(getPodDetails());
     }
     return () => {
@@ -84,7 +70,7 @@ const Overview = () => {
   }, [podDetailsList]);
 
   useInterval(() => {
-    if (isPodmanInstalled && passwd) {
+    if (isPodmanInstalled) {
       dispatch(getPodDetails());
     }
   }, pollingInterval);
@@ -113,7 +99,6 @@ const Overview = () => {
             <LogsUI />
           </Tab>
         </Tabs>
-        <RootPasswordModal />
       </Card>
     </div>
   );

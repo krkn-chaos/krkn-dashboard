@@ -19,18 +19,18 @@ const sideMenuOptions = [
     displayName: "Experiments",
     icon: <CatalogIcon />,
   },
-  {
-    id: 2,
-    key: "results",
-    displayName: "Results",
-    icon: <CatalogIcon />,
-  },
-  {
-    id: 3,
-    key: "archives",
-    displayName: "Archives",
-    icon: <CatalogIcon />,
-  },
+  // {
+  //   id: 2,
+  //   key: "results",
+  //   displayName: "Results",
+  //   icon: <CatalogIcon />,
+  // },
+  // {
+  //   id: 3,
+  //   key: "archives",
+  //   displayName: "Archives",
+  //   icon: <CatalogIcon />,
+  // },
 ];
 
 const MenuOptions = () => {

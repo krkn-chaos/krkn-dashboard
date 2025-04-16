@@ -6,6 +6,8 @@ import {
   CardBody,
   Form,
   FormGroup,
+  Grid,
+  GridItem,
   TextInput,
   Title,
 } from "@patternfly/react-core";
@@ -84,6 +86,7 @@ const NewExperiment = () => {
       namespace: "",
       pod_label: "",
       name: "",
+      scenarioChecked: "node-scenarios",
     },
     "pvc-scenarios": {
       kubeconfigPath: "",
@@ -93,6 +96,7 @@ const NewExperiment = () => {
       fill_percentage: 50,
       duration: 60,
       name: "",
+      scenarioChecked: "pvc-scenarios",
     },
     "time-scenarios": {
       kubeconfigPath: "",
@@ -103,6 +107,7 @@ const NewExperiment = () => {
       container_name: "",
       namespace: "",
       name: "",
+      scenarioChecked: "time-scenarios",
     },
   });
 
@@ -114,6 +119,7 @@ const NewExperiment = () => {
         [key]: value,
       },
     }));
+    console.log(scenarioChecked);
     checkBtnDisabled();
   };
   const checkBtnDisabled = () => {
@@ -123,6 +129,7 @@ const NewExperiment = () => {
     setIsBtnDisabled(!isFull);
   };
   const sendData = async () => {
+    console.log(scenarioChecked);
     await dispatch(startKraken(data[scenarioChecked]));
   };
 
@@ -140,32 +147,39 @@ const NewExperiment = () => {
               labelOff="Cerberus Disabled"
             />
           </div>*/}
-          <KubeconfigFileUpload />
-          <div>or</div>
 
-          {scenarioChecked &&
-            paramsList[scenarioChecked].map((item) => {
-              return (
-                <FormGroup
-                  key={item.key}
-                  isRequired={item.isRequired}
-                  label={item.label}
-                  fieldId={item.fieldId}
-                  helperText={item.helperText}
-                >
-                  <TextInput
-                    isRequired={item.isRequired}
-                    type="text"
-                    id={item.fieldId}
-                    name={item.key}
-                    value={data[scenarioChecked][item.key]}
-                    aria-describedby={item.ariaDescribedby}
-                    onChange={(evt, val) => changeHandler(evt, val, item.key)}
-                  />
-                </FormGroup>
-              );
-            })}
-
+          <Grid hasGutter>
+            <GridItem span={6}>
+              <FormGroup isRequired={false} label={"KUBECONFIG FILE"}>
+                <KubeconfigFileUpload />
+              </FormGroup>
+            </GridItem>
+            {scenarioChecked &&
+              paramsList[scenarioChecked].map((item) => {
+                return (
+                  <GridItem span={6} key={item.key}>
+                    <FormGroup
+                      isRequired={item.isRequired}
+                      label={item.label}
+                      fieldId={item.fieldId}
+                      helperText={item.helperText}
+                    >
+                      <TextInput
+                        isRequired={item.isRequired}
+                        type="text"
+                        id={item.fieldId}
+                        name={item.key}
+                        value={data[scenarioChecked][item.key]}
+                        aria-describedby={item.ariaDescribedby}
+                        onChange={(evt, val) =>
+                          changeHandler(evt, val, item.key)
+                        }
+                      />
+                    </FormGroup>
+                  </GridItem>
+                );
+              })}
+          </Grid>
           <ActionGroup className="action-group-wrapper">
             <TextButton
               variant="primary"

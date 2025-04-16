@@ -12,31 +12,31 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 
 import React from "react";
-import container from "@/assets/scenario-icons/container.png";
+// import container from "@/assets/scenario-icons/container.png";
 import node_io from "@/assets/scenario-icons/node_io.jpg";
 import { updateScenarioChecked } from "@/actions/newExperiment.js";
 
 const scenariosOptions = [
-  {
-    id: 0,
-    key: "container-scenarios",
-    label: "Container Scenarios",
-    icon: container,
-    isImg: true,
-  },
+  // {
+  //   id: 0,
+  //   key: "container-scenarios",
+  //   label: "Container Scenarios",
+  //   icon: container,
+  //   isImg: true,
+  // },
   // {
   //   id: 1,
   //   key: "namespace-scenarios",
   //   label: "Namespace Scenarios",
   //   isImg: true,
   // },
-  {
-    id: 2,
-    key: "node-scenarios",
-    label: "Node Scenarios",
-    isImg: false,
-    icon: OutlinedHddIcon,
-  },
+  // {
+  //   id: 2,
+  //   key: "node-scenarios",
+  //   label: "Node Scenarios",
+  //   isImg: false,
+  //   icon: OutlinedHddIcon,
+  // },
   {
     id: 3,
     key: "pvc-scenarios",
