@@ -6,8 +6,6 @@ import {
   MemoryIcon,
   MicrochipIcon,
   OutlinedClockIcon,
-  OutlinedHddIcon,
-  VolumeIcon,
 } from "@patternfly/react-icons";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -37,13 +35,13 @@ const scenariosOptions = [
   //   isImg: false,
   //   icon: OutlinedHddIcon,
   // },
-  {
-    id: 3,
-    key: "pvc-scenarios",
-    label: "PVC Scenarios",
-    isImg: false,
-    icon: VolumeIcon,
-  },
+  // {
+  //   id: 3,
+  //   key: "pvc-scenarios",
+  //   label: "PVC Scenarios",
+  //   isImg: false,
+  //   icon: VolumeIcon,
+  // },
   {
     id: 4,
     key: "pod-scenarios",

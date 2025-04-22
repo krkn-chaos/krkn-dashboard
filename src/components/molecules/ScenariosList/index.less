@@ -1,8 +1,9 @@
 .scenarios-container {
   .parent {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-evenly;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 16px;
     .card {
       margin: 0.5vw;
     }

@@ -1,6 +1,7 @@
 import * as TYPES from "./types";
 
-import API from "@/utils/axiosInstance";
+import API, { getUrl } from "@/utils/axiosInstance";
+
 import Cookies from "universal-cookie";
 import axios from "axios";
 import { showToast } from "./toastActions";
@@ -85,15 +86,12 @@ export const logsFunc = (activePod) => async (dispatch, getState) => {
 
   socketInstance.off("logs");
   socketInstance.on("logs", (data) => {
-    //console.log(data);
     dispatch(getLogs(data));
   });
 };
 
 export const getLogs = (data) => async (dispatch) => {
   try {
-    dispatch({ type: TYPES.LOADING });
-
     let logs = (data.error || data).toString().replace(/\n/g, "<br/>");
     logs += "<br/>";
     dispatch({
@@ -102,8 +100,6 @@ export const getLogs = (data) => async (dispatch) => {
     });
   } catch (error) {
     dispatch(showToast("danger", "Something went wrong", "Try again later"));
-  } finally {
-    dispatch({ type: TYPES.COMPLETED });
   }
 };
 
@@ -173,16 +169,12 @@ export const fileUpload = (fileObj) => async (dispatch) => {
     const formData = new FormData();
 
     formData.append("files", fileObj);
-
-    const response = await axios.post(
-      "http://localhost:8000/uploadFile",
-      formData,
-      {
-        headers: {
-          "content-type": "multipart/form-data",
-        },
-      }
-    );
+    const url = getUrl();
+    const response = await axios.post(`${url}/uploadFile`, formData, {
+      headers: {
+        "content-type": "multipart/form-data",
+      },
+    });
     if (response.data.status === "200") {
       dispatch(showToast("success", "File uploaded successfully", ""));
     }
