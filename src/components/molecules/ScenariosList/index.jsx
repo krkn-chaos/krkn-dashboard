@@ -49,13 +49,13 @@ const scenariosOptions = [
     isImg: false,
     icon: CubeIcon,
   },
-  {
-    id: 5,
-    key: "time-scenarios",
-    label: "Time Scenarios",
-    icon: OutlinedClockIcon,
-    isImg: false,
-  },
+  // {
+  //   id: 5,
+  //   key: "time-scenarios",
+  //   label: "Time Scenarios",
+  //   icon: OutlinedClockIcon,
+  //   isImg: false,
+  // },
   {
     id: 6,
     key: "node-cpu-hog",
