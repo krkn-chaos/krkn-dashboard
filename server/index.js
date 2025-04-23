@@ -318,11 +318,10 @@ app.post("/deleteConfig", (req, res) => {
 const frame = async (status, podName) => {
   if (status === "exited") {
     clearInterval(myInterval);
-    await saveLogs(podName);
+    saveLogs(podName);
   }
 };
 const myFunc = (podName) => {
-  console.log("im here myfunc");
   const command = `${PODMAN} inspect ${podName} --format "{{.State.Status}}"`;
 
   child_process.exec(command, (err, stdout, stderr) => {
