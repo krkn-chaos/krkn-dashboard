@@ -5,11 +5,35 @@
 $ git clone https://github.com/krkn-chaos/krkn-dashboard.git
 ```
 
-### Checkout the branch
+### Checkout the branch 
 
 ```
 $ git checkout <feature_branch> 
 ```
+### Enable podman.socket
+
+Although the kernel mechanisms used to implement containers (for example, cgroups) can be nested, a container usually isn’t set up with all the extra context to support nested podman (or docker) containers. 
+
+Instead, it’s generally better to create a separate container within the host OS, using the podman-remote command. 
+
+First, the podman.socket service needs to be running outside the container.
+
+It can be enabled either system-wide or as user-specific.
+
+#### Enable system-wide:
+```
+$ systemctl enable --now podman.socket
+```
+Socket is: /run/podman/podman.sock
+
+#### Enable user-specific
+```
+$ loginctl enable-linger <user>
+$ systemctl --user enable --now podman.socket
+```
+Socket is: /run/user/${UID}/podman/podman.sock
+
+The podman.remote socket must be mapped into the controlling container so that podman-remote will connect to the host podman server; for example using -v/run/user/{UID}/podman/podman.sock:/run/podman/podman.sock
 
 ### Build the image
 ```
