@@ -3,7 +3,7 @@ import * as TYPES from "@/actions/types";
 const initialState = {
   container_id: "",
   pod_status: null,
-  logs: "",
+  logs: [],
   podDetailsList: [],
   scenarioChecked: "pod-scenarios",
   isRootModalOpen: false,
@@ -26,7 +26,7 @@ const experimentReducer = (state = initialState, action) => {
     case TYPES.SET_LOGS:
       return {
         ...state,
-        logs: state.logs.concat(payload.logs),
+        logs: [...state.logs, ...payload.logs],
       };
     case TYPES.EMPTY_LOGS:
       return { ...state, logs: "" };
