@@ -37,7 +37,17 @@ export const startKraken = (data) => async (dispatch, getState) => {
       dispatch(showToast("danger", response.data.message));
     }
   } catch (error) {
-    dispatch(showToast("danger", "Something went wrong", "Try again later"));
+    if (error.response) {
+      dispatch(
+        showToast(
+          "danger",
+          "Something went wrong",
+          error.response?.data?.message
+        )
+      );
+    } else {
+      dispatch(showToast("danger", "Something went wrong", "Try again later"));
+    }
   }
   dispatch({ type: TYPES.COMPLETED });
 };
@@ -92,14 +102,22 @@ export const logsFunc = (activePod) => async (dispatch, getState) => {
 
 export const getLogs = (data) => async (dispatch) => {
   try {
-    let logs = (data.error || data).toString().replace(/\n/g, "<br/>");
-    logs += "<br/>";
+    dispatch({ type: TYPES.LOADING });
+
+    const rawLogs = (data.error || data).toString();
+
+    let logsArray = rawLogs
+      .split(/\r?\n|,\+\s?/) // splits on newlines or ",+ "
+      .filter((line) => line.trim() !== ""); // remove empty lines
+
     dispatch({
       type: TYPES.SET_LOGS,
-      payload: { logs, errorLogs: data },
+      payload: { logs: logsArray, errorLogs: rawLogs },
     });
   } catch (error) {
     dispatch(showToast("danger", "Something went wrong", "Try again later"));
+  } finally {
+    dispatch({ type: TYPES.COMPLETED });
   }
 };
 

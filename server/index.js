@@ -11,6 +11,7 @@ import fs from "fs";
 import multer from "multer";
 import process from "process";
 import sqlite3 from "sqlite3";
+import stripAnsi from "strip-ansi";
 
 sqlite3.verbose();
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
@@ -63,22 +64,22 @@ app.post("/start-kraken/", (req, res) => {
   let command = "";
   switch (scenario) {
     case "pod-scenarios":
-      command = `${PODMAN} run --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_TIMEOUT=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:pod-scenarios`;
+      command = `${PODMAN} run --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_TIMEOUT=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:pod-scenarios`;
       break;
     case "container-scenarios":
-      command = `${PODMAN} run  --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:container-scenarios`;
+      command = `${PODMAN} run  --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:container-scenarios`;
       break;
     case "node-cpu-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-cpu-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-cpu-hog`;
       break;
     case "node-io-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-io-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-io-hog`;
       break;
     case "node-memory-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/redhat-chaos/krkn-hub:node-memory-hog`;
+      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-memory-hog`;
       break;
     case "pvc-scenarios":
-      command = `${PODMAN} run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenario`;
+      command = `${PODMAN} run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenarios`;
       break;
     case "node-scenarios":
       command = `${PODMAN} run --name=${req.body.params.name} --net=host --env-host=true -v ${req.body.params.kubeconfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:node-scenarios`;
@@ -452,33 +453,11 @@ io.on("connection", (socket) => {
   socket.on("logs", (activePod) => {
     const ls = child_process.spawn("podman", ["logs", "-f", activePod]);
 
-    // ls.stdout.on("data", (data) => {
-    //   const logLines = data.toString().split("\n");
-
-    //   logLines.forEach((line) => {
-    //     if (line.trim()) {
-    //       try {
-    //         const parsedJson = JSON.parse(line);
-    //         socket.emit("logs", JSON.stringify(parsedJson, null, 2));
-    //       } catch (error) {
-    //         socket.emit("logs", ansiToHtml.toHtml(line));
-    //       }
-    //     }
-    //   });
-    // });
-    let logBuffer = ""; // Buffer to store incomplete JSON logs
-
     ls.stdout.on("data", (data) => {
-      logBuffer += data.toString(); // Append new logs
-
-      try {
-        // Try parsing as JSON
-        const parsedJson = JSON.parse(logBuffer);
-        socket.emit("logs", JSON.stringify(parsedJson, null, 2)); // Send formatted JSON
-        logBuffer = ""; // Clear buffer after successful parsing
-      } catch (error) {
-        // If JSON is incomplete, do nothing (wait for more chunks)
-      }
+      const lines = data.toString().split("\n");
+      lines.forEach((line) => {
+        if (line.trim()) socket.emit("logs", stripAnsi(line));
+      });
     });
 
     ls.stderr.on("data", (data) => {
