@@ -1,6 +1,8 @@
 // server/index.js
 import * as path from "path";
 
+import { Client } from "@opensearch-project/opensearch";
+// import { Client } from '@elastic/elasticsearch';
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
@@ -434,6 +436,57 @@ app.post(
   uploadFiles,
   handleFileUploadError
 );
+
+app.post("/connect-es", async (req, res) => {
+  const { host, username, password, use_ssl, index } = req.body.params;
+  console.log("Received config:", req.body.params);
+  const node = `${use_ssl ? "https" : "https"}://${host}/`;
+
+  const clientOptions = {
+    node,
+    disableProductCheck: true,
+  };
+
+  if (username && password) {
+    clientOptions.auth = { username, password };
+  }
+
+  if (!use_ssl) {
+    clientOptions.ssl = {
+      rejectUnauthorized: false,
+    };
+  }
+  console.log("Client options");
+  console.log(clientOptions);
+  const client = new Client(clientOptions);
+
+  try {
+    const info = await client.info();
+    console.log("Connected to ES:", info);
+    const ping = await client.ping();
+    if (ping) {
+      const result = await client.search({
+        index: index ? index : "*",
+        body: {
+          query: {
+            match_all: {},
+          },
+        },
+      });
+      console.log("Results", result.body.hits);
+      res.json({
+        message: "Connected to Elasticsearch",
+        results: result.body.hits.hits,
+        status: 200,
+      });
+    } else {
+      res.status(400).json({ message: "Ping failed, ES not reachable" });
+    }
+  } catch (err) {
+    console.error("Elasticsearch error:", err);
+    res.status(500).json({ message: "Connection failed", error: err.message });
+  }
+});
 
 const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
