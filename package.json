@@ -11,6 +11,8 @@
     "server": "node server/index.js"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^9.0.1",
+    "@opensearch-project/opensearch": "^3.5.1",
     "@patternfly/patternfly": "^5.3.1",
     "@patternfly/react-core": "^5.3.4",
     "@patternfly/react-table": "^5.0.0",

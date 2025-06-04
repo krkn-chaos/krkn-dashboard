@@ -30,3 +30,7 @@ export const SET_RESULTS = "SET_RESULTS";
 
 /* Logs */
 export const SET_SELECTED_POD = "SET_SELECTED_POD";
+
+/* STORAGE */
+export const SET_STORAGE_DATA = "SET_STORAGE_DATA";
+export const SHOW_ES_CARD = "SHOW_ES_CARD";

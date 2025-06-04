@@ -7,6 +7,7 @@ import React, { useEffect } from "react";
 
 import Experiments from "@/components/template/Experiments";
 import MainLayout from "@/container/MainLayout";
+import MetricsStorage from "@/components/template/MetricsStorage";
 import Overview from "@/components/Overview";
 import Results from "@/components/template/Results";
 import { checkPodmanInstalled } from "@/actions/newExperiment.js";
@@ -25,6 +26,7 @@ function App() {
             <Route path={APP_ROUTES.OVERVIEW} element={<Overview />} />
             <Route path={APP_ROUTES.EXPERIMENTS} element={<Experiments />} />
             <Route path={APP_ROUTES.RESULTS} element={<Results />} />
+            <Route path={APP_ROUTES.METRICS} element={<MetricsStorage />} />
             <Route index element={<Overview />} />
           </Route>
         </Routes>

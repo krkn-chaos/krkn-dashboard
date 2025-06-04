@@ -1,30 +1,22 @@
 // server/index.js
 import * as path from "path";
 
+import { Client } from "@opensearch-project/opensearch";
+// import { Client } from '@elastic/elasticsearch';
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
 import cors from "cors";
+import { db } from "./db.js";
 import express from "express";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import multer from "multer";
 import process from "process";
-import sqlite3 from "sqlite3";
 import stripAnsi from "strip-ansi";
 
-sqlite3.verbose();
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
-
-const databaseDirectory = __dirname + "/../database/krkn.db";
-const db = new sqlite3.Database(
-  databaseDirectory,
-  sqlite3.OPEN_READWRITE,
-  (err) => {
-    if (err) return console.error(err);
-  }
-);
 
 const PORT = 8000;
 const app = express();
@@ -195,30 +187,6 @@ app.get("/getPodmanStatus", (req, res) => {
   });
 });
 let sql = "";
-
-db.exec(`CREATE TABLE IF NOT EXISTS test (
-    id INTEGER PRIMARY KEY,
-    movie varchar(50),
-    quote varchar(50),
-    char varchar(50)
-  );`);
-
-// db.exec(`DROP TABLE config`);
-db.exec(`CREATE TABLE IF NOT EXISTS config (
-    id INTEGER PRIMARY KEY,
-    name varchar(50),
-    params json
-  );`);
-// db.exec(`DROP TABLE details`);
-db.exec(`CREATE TABLE IF NOT EXISTS details (
-    container_id varchar(250) PRIMARY KEY,
-    image varchar(150),
-    mounts varchar(100),
-    state varchar(20),
-    status varchar(10),
-    name varchar(50),
-    content TEXT
-  );`);
 
 app.post("/saveConfig", (req, res) => {
   try {
@@ -434,6 +402,57 @@ app.post(
   uploadFiles,
   handleFileUploadError
 );
+
+app.post("/connect-es", async (req, res) => {
+  const { host, username, password, use_ssl, index } = req.body.params;
+  console.log("Received config:", req.body.params);
+  const node = `${use_ssl ? "https" : "https"}://${host}/`;
+
+  const clientOptions = {
+    node,
+    disableProductCheck: true,
+  };
+
+  if (username && password) {
+    clientOptions.auth = { username, password };
+  }
+
+  if (!use_ssl) {
+    clientOptions.ssl = {
+      rejectUnauthorized: false,
+    };
+  }
+  console.log("Client options");
+  console.log(clientOptions);
+  const client = new Client(clientOptions);
+
+  try {
+    const info = await client.info();
+    console.log("Connected to ES:", info);
+    const ping = await client.ping();
+    if (ping) {
+      const result = await client.search({
+        index: index ? index : "*",
+        body: {
+          query: {
+            match_all: {},
+          },
+        },
+      });
+      console.log("Results", result.body.hits);
+      res.json({
+        message: "Connected to Elasticsearch",
+        results: result.body.hits.hits,
+        status: 200,
+      });
+    } else {
+      res.status(400).json({ message: "Ping failed, ES not reachable" });
+    }
+  } catch (err) {
+    console.error("Elasticsearch error:", err);
+    res.status(500).json({ message: "Connection failed", error: err.message });
+  }
+});
 
 const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
