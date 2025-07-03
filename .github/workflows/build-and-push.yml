@@ -27,7 +27,7 @@ jobs:
        uses: redhat-actions/buildah-build@v2
        with:
          image: krkn-dashboard
-         context: krkn-dashboard
+         context: .
          tags: |
            latest
            ${{ github.sha }}
