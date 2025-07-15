@@ -1,101 +1,107 @@
+import "./index.less";
+
 import {
-  Card,
-  CardBody,
-  CardHeader,
-  Checkbox,
-  Grid,
-  GridItem,
-} from "@patternfly/react-core";
-import React, { useEffect, useState } from "react";
-import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
+  ExpandableRowContent,
+  Table,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
+} from "@patternfly/react-table";
+import { Grid, GridItem } from "@patternfly/react-core";
+import React, { useCallback, useState } from "react";
 
+import ConfigRow from "@/components/molecules/ConfigRow";
+import GraphRow from "@/components/molecules/GraphRow";
+import StatusCell from "@/components/atoms/StatusCell";
+import { formatDateTime } from "@/utils/helper";
 import { useSelector } from "react-redux";
-
-// Utility to flatten nested objects with dot notation
-const flatten = (obj, parentKey = "", result = {}) => {
-  for (const [key, value] of Object.entries(obj)) {
-    const fullKey = parentKey ? `${parentKey}.${key}` : key;
-    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-      flatten(value, fullKey, result);
-    } else {
-      result[fullKey] = value;
-    }
-  }
-  return result;
-};
 
 const StorageTable = () => {
   const results = useSelector((state) => state.storage.results);
-  const [selectedColumns, setSelectedColumns] = useState([]);
-  const [flattenedData, setFlattenedData] = useState([]);
-  const [allColumns, setAllColumns] = useState([]);
+  //Row expansion
+  const [expandedRunNames, setExpandedRunNames] = useState([]);
+  const setRunExpanded = (run, isExpanding = true) => {
+    setExpandedRunNames((prevExpanded) => {
+      const otherExpandedRunNames = prevExpanded.filter((r) => r !== run.id);
+      return isExpanding
+        ? [...otherExpandedRunNames, run.id]
+        : otherExpandedRunNames;
+    });
+  };
 
-  // Process results on load or when they change
-  useEffect(() => {
-    if (!results?.length) return;
-
-    const flattened = results.map((hit) => flatten(hit._source));
-    const keys = new Set();
-
-    flattened.forEach((doc) =>
-      Object.keys(doc).forEach((key) => keys.add(key))
-    );
-
-    const columnList = Array.from(keys);
-    setAllColumns(columnList);
-    setFlattenedData(flattened);
-  }, [results]);
-
-  const toggleColumn = (col) => {
-    setSelectedColumns((prev) =>
-      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col]
-    );
+  const isRunExpanded = useCallback(
+    (run) => expandedRunNames.includes(run.id),
+    [expandedRunNames]
+  );
+  const columnNames = {
+    scenario_type: "Scenario Type",
+    start_time: "Start Time",
+    end_time: "End Time",
+    namespace: "Namespace",
+    status: "Status",
   };
 
   return (
     <>
-      <Card>
-        <CardHeader>Select the columns</CardHeader>
-        <CardBody>
-          <Grid hasGutter>
-            {allColumns.map((col) => (
-              <GridItem key={col} span={2}>
-                <Checkbox
-                  id={col}
-                  label={col}
-                  isChecked={selectedColumns.includes(col)}
-                  onChange={() => toggleColumn(col)}
-                />
-              </GridItem>
-            ))}
-          </Grid>
-        </CardBody>
-      </Card>
-
-      {selectedColumns.length > 0 && (
-        <Table isStriped aria-label="Storage Data Table">
-          <Thead>
-            <Tr>
-              {selectedColumns.map((column) => (
-                <Th key={column}>{column}</Th>
+      <Table isStriped aria-label="Storage Data Table">
+        <Thead>
+          <Tr>
+            <Th screenReaderText="Row expansion" />
+            {columnNames &&
+              Object.keys(columnNames).map((column) => (
+                <Th key={column}>{columnNames[column]}</Th>
               ))}
-            </Tr>
-          </Thead>
-          <Tbody>
-            {flattenedData.map((doc, idx) => (
-              <Tr key={idx}>
-                {selectedColumns.map((col) => (
-                  <Td key={col}>
-                    {typeof doc[col] === "object" && doc[col] !== null
-                      ? JSON.stringify(doc[col])
-                      : String(doc[col] ?? "")}
+          </Tr>
+        </Thead>
+
+        {results?.length > 0 &&
+          results.map((doc, idx) => {
+            return (
+              <Tbody key={doc.id} isExpanded={isRunExpanded(doc)}>
+                <Tr key={doc.id}>
+                  <Td
+                    expand={
+                      doc.config
+                        ? {
+                            rowIndex: idx,
+                            isExpanded: isRunExpanded(doc),
+                            onToggle: () =>
+                              setRunExpanded(doc, !isRunExpanded(doc)),
+                            expandId: `expandable-row-${doc.id}`,
+                          }
+                        : undefined
+                    }
+                  />
+                  <Td>{doc.scenario_type}</Td>
+                  <Td>{formatDateTime(doc.start_time)}</Td>
+                  <Td>{formatDateTime(doc.end_time)}</Td>
+                  <Td>{doc.config?.parameters?.namespace_pattern}</Td>
+                  <Td>
+                    <StatusCell exit_status={doc.status} />
                   </Td>
-                ))}
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      )}
+                </Tr>
+                {doc.config && isRunExpanded(doc) ? (
+                  <Tr isExpanded={isRunExpanded(doc)}>
+                    <Td colSpan={8}>
+                      <ExpandableRowContent>
+                        <Grid hasGutter className="metrics-expanded-row">
+                          <GridItem span={6}>
+                            <ConfigRow doc={doc} />
+                          </GridItem>
+                          <GridItem span={6}>
+                            <GraphRow doc={doc} />
+                          </GridItem>
+                        </Grid>
+                      </ExpandableRowContent>
+                    </Td>
+                  </Tr>
+                ) : null}
+              </Tbody>
+            );
+          })}
+      </Table>
     </>
   );
 };

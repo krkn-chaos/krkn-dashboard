@@ -1,6 +1,5 @@
 name: Build docker image on merge
 
-<<<<<<< HEAD
 
 # Trigger the workflow when a pull request is merged into the main branch
 
@@ -64,60 +63,3 @@ jobs:
          registry: quay.io/redhat-chaos/krkn
          username: ${{ secrets.QUAY_USER }}
          password: ${{ secrets.QUAY_TOKEN }}
-=======
-# Trigger the workflow when a pull request is merged into the main branch
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      # Step 1: Checkout the repository code
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Step 2: Build the image
-      - name: Build image
-        id: build-krkn-dashboard
-        uses: redhat-actions/buildah-build@v2
-        with:
-          image: krkn-dashboard
-          context: krkn-dashboard
-          tags: |
-            latest
-            ${{ github.sha }}
-          containerfiles: containers/Dockerfile
-
-      # Step 3: Save image metadata to a file
-      - name: Save image metadata
-        run: |
-          mkdir -p ./image
-          echo "Image Name: krkn-dashboard/image:latest" > ./image/image_info.txt
-          echo "Build Timestamp: $(date)" >> ./image/image_info.txt
-          echo "Commit: ${{ github.sha }}" >> ./image/image_info.txt
-
-      # Step 4: Commit and push the updated image metadata file to the repository
-      - name: Commit and push image info
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add ./image/image_info.txt
-          git commit -m "Update the image metadata [skip ci]" || echo "Nothing to commit"
-          git push origin ${{ github.ref_name }}
-
-      # Step 5: Push krkn-dashboard image to quay.io
-      - name: Push the image to quay.io
-        id: push-image-to-quay
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ steps.build-krkn-dashboard.outputs.image }}
-          tags: ${{ steps.build-krkn-dashboard.outputs.tags }}
-          registry: quay.io/redhat-chaos/krkn
-          username: ${{ secrets.QUAY_USER }}
-          password: ${{ secrets.QUAY_TOKEN }}
->>>>>>> fd49d66 (Release Version tag)

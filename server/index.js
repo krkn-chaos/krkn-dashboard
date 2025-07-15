@@ -1,13 +1,13 @@
 // server/index.js
 import * as path from "path";
 
-import { Client } from "@opensearch-project/opensearch";
-// import { Client } from '@elastic/elasticsearch';
+
+import { ElasticsearchService } from "./elasticsearchService.js";
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
 import cors from "cors";
-import { db } from "./db.js";
+import { saveConfig, getConfig, getResults, deleteConfig, savePodDetails } from "./db.js";
 import express from "express";
 import { fileURLToPath } from "url";
 import fs from "fs";
@@ -186,102 +186,38 @@ app.get("/getPodmanStatus", (req, res) => {
     res.end();
   });
 });
-let sql = "";
-
-app.post("/saveConfig", (req, res) => {
+app.post("/saveConfig", async (req, res) => {
   try {
     const { name, params } = req.body.params;
-
-    sql = `INSERT INTO config(name, params) VALUES (?,?)`;
-    db.run(sql, [name, JSON.stringify(params)], (err) => {
-      if (err) {
-        console.log(err);
-        return res.json({
-          status: 300,
-          message: "error inserting params",
-          error: err,
-        });
-      }
-      console.log("successful insertion");
-      return res.json({
-        status: 200,
-        message: "Config saved successfully",
-      });
-    });
+    const result = await saveConfig(name, params);
+    return res.json(result);
   } catch (error) {
-    return res.json({
-      status: 400,
-      message: false,
-    });
+    return res.json(error);
   }
 });
 
-app.get("/getConfig", (req, res) => {
+app.get("/getConfig", async (req, res) => {
   try {
-    sql = `SELECT * FROM config`;
-    db.all(sql, [], (err, rows) => {
-      if (err) {
-        return res.json({
-          status: 300,
-          message: "error geting the config",
-          error: err,
-        });
-      }
-
-      return res.json({
-        status: 200,
-        message: rows,
-      });
-    });
+    const result = await getConfig();
+    return res.json(result);
   } catch (error) {
-    return res.json({
-      status: 400,
-      message: false,
-    });
+    return res.json(error);
   }
 });
-app.get("/getResults", (req, res) => {
+app.get("/getResults", async (req, res) => {
   try {
-    sql = `SELECT * FROM details`;
-    db.all(sql, [], (err, rows) => {
-      if (err) {
-        return res.json({
-          status: 300,
-          message: "error getting details",
-          error: err,
-        });
-      }
-
-      return res.json({
-        status: 200,
-        message: rows,
-      });
-    });
+    const result = await getResults();
+    return res.json(result);
   } catch (error) {
-    return res.json({
-      status: 400,
-      message: false,
-    });
+    return res.json(error);
   }
 });
-app.post("/deleteConfig", (req, res) => {
+app.post("/deleteConfig", async (req, res) => {
   try {
-    sql = `DELETE FROM config WHERE id=(?)`;
-    db.run(sql, [req.body.params], (err) => {
-      if (err) {
-        console.log(err);
-        return res.json({ status: 300, message: "error", error: err });
-      }
-      return res.json({
-        status: 200,
-        message: "Deleted!",
-      });
-    });
+    const result = await deleteConfig(req.body.params);
+    return res.json(result);
   } catch (error) {
-    return res.json({
-      status: 400,
-      message: false,
-    });
+    return res.json(error);
   }
 });
 const frame = async (status, podName) => {
@@ -307,32 +243,24 @@ const myFunc = (podName) => {
     }
   });
 };
-const savePodDetails = (podName, fileContent) => {
+const savePodDetailsToFile = async (podName, fileContent) => {
   const command = `${PODMAN} inspect ${podName} `;
-  child_process.exec(command, (err, stdout, stderr) => {
+  child_process.exec(command, async (err, stdout, stderr) => {
     if (stdout) {
-      sql = `INSERT INTO details(container_id, image, mounts, state, status, name, content) VALUES (?,?,?,?,?,?,?)`;
-      const d = JSON.parse(stdout);
-
-      db.run(
-        sql,
-        [
+      try {
+        const d = JSON.parse(stdout);
+        await savePodDetails(
           d[0].Id,
           d[0].ImageName,
           d[0].Mounts[0].Destination,
           d[0].State.Status,
           d[0].State.ExitCode,
           d[0].Name,
-          fileContent,
-        ],
-        (err) => {
-          if (err) {
-            console.log(err);
-            return;
-          }
-          console.log("successful insertion");
-        }
-      );
+          fileContent
+        );
+      } catch (error) {
+        console.log("Error saving pod details:", error);
+      }
     } else if (stderr || err) {
       console.log(err);
     }
@@ -351,7 +279,7 @@ const saveLogs = (podName) => {
 
         // Call function to store in SQLite database
 
-        savePodDetails(podName, data);
+        savePodDetailsToFile(podName, data);
       });
     } else if (stderr) {
       return console.log("cannot save logs error");
@@ -424,30 +352,16 @@ app.post("/connect-es", async (req, res) => {
   }
   console.log("Client options");
   console.log(clientOptions);
-  const client = new Client(clientOptions);
+  const esClient = new ElasticsearchService({ clientOptions });
 
   try {
-    const info = await client.info();
-    console.log("Connected to ES:", info);
-    const ping = await client.ping();
-    if (ping) {
-      const result = await client.search({
-        index: index ? index : "*",
-        body: {
-          query: {
-            match_all: {},
-          },
-        },
-      });
-      console.log("Results", result.body.hits);
-      res.json({
-        message: "Connected to Elasticsearch",
-        results: result.body.hits.hits,
-        status: 200,
-      });
-    } else {
-      res.status(400).json({ message: "Ping failed, ES not reachable" });
-    }
+    const data = await esClient.fetchRunDetails(index);
+    
+    res.json({
+      message: "Connected to Elasticsearch",
+      results: data,
+      status: 200,
+    });
   } catch (err) {
     console.error("Elasticsearch error:", err);
     res.status(500).json({ message: "Connection failed", error: err.message });
