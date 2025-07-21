@@ -332,7 +332,7 @@ app.post(
 );
 
 app.post("/connect-es", async (req, res) => {
-  const { host, username, password, use_ssl, index } = req.body.params;
+  const { host, username, password, use_ssl, index, start_date, end_date, size, offset } = req.body.params;
   console.log("Received config:", req.body.params);
   const node = `${use_ssl ? "https" : "https"}://${host}/`;
 
@@ -350,17 +350,16 @@ app.post("/connect-es", async (req, res) => {
       rejectUnauthorized: false,
     };
   }
-  console.log("Client options");
-  console.log(clientOptions);
   const esClient = new ElasticsearchService({ clientOptions });
 
   try {
-    const data = await esClient.fetchRunDetails(index);
+    const data = await esClient.fetchRunDetails(index, size, start_date, end_date, offset);
     
     res.json({
       message: "Connected to Elasticsearch",
       results: data,
       status: 200,
+      
     });
   } catch (err) {
     console.error("Elasticsearch error:", err);

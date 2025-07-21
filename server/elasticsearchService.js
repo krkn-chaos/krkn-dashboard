@@ -6,7 +6,7 @@ export class ElasticsearchService {
     this.client = new Client(clientOptions);
   }
 
-  async fetchRunDetails(index, size = 10) {
+  async fetchRunDetails(index, size = 25, start_date, end_date, offset = 0) {
     try {
       const info = await this.client.info();
       console.log("Connected to ES:", info);
@@ -19,6 +19,7 @@ export class ElasticsearchService {
       const result = await this.client.search({
         index: index ? index : "*",
         size,
+        from: offset,
         body: {
           query: {
             bool: {
@@ -27,8 +28,8 @@ export class ElasticsearchService {
                   range: {
                     timestamp: {
                       format: "yyyy-MM-dd",
-                      gte: "2025-07-04",
-                      lte: "2025-07-07",
+                      gte: start_date,
+                      lte: end_date,
                     },
                   },
                 },
@@ -49,7 +50,23 @@ export class ElasticsearchService {
           this.parseRunDetails(hit._source, hit._id)
         )
       );
-      return parsedData;
+
+      return {
+        data: parsedData,
+        pagination: {
+          total: result.body.hits.total.value || result.body.hits.total,
+          size: size,
+          offset: offset,
+          currentPage: Math.floor(offset / size) + 1,
+          totalPages: Math.ceil(
+            (result.body.hits.total.value || result.body.hits.total) / size
+          ),
+          hasNext:
+            offset + size <
+            (result.body.hits.total.value || result.body.hits.total),
+          hasPrevious: offset > 0,
+        },
+      };
     } catch (error) {
       console.error("Elasticsearch fetch error:", error.meta || error);
       throw error;
@@ -112,6 +129,10 @@ export class ElasticsearchService {
             );
             podEntry.pod_rescheduling_time = parseFloat(
               pod.pod_rescheduling_time?.toFixed(2) || 0
+            );
+
+            podEntry.krkn_pod_recovery_time = parseFloat(
+              parameters.config?.krkn_pod_recovery_time?.toFixed(2)
             );
           }
 

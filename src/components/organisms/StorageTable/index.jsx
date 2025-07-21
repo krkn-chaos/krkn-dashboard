@@ -14,12 +14,17 @@ import React, { useCallback, useState } from "react";
 
 import ConfigRow from "@/components/molecules/ConfigRow";
 import GraphRow from "@/components/molecules/GraphRow";
+import RenderPagination from "../RenderPagination";
 import StatusCell from "@/components/atoms/StatusCell";
+import StorageTableFilter from "@/components/molecules/StorageTableFilter";
 import { formatDateTime } from "@/utils/helper";
 import { useSelector } from "react-redux";
 
 const StorageTable = () => {
   const results = useSelector((state) => state.storage.results);
+  const { start_date, end_date, size, pagination } = useSelector(
+    (state) => state.storage
+  );
   //Row expansion
   const [expandedRunNames, setExpandedRunNames] = useState([]);
   const setRunExpanded = (run, isExpanding = true) => {
@@ -45,6 +50,7 @@ const StorageTable = () => {
 
   return (
     <>
+      <StorageTableFilter start_date={start_date} end_date={end_date} />
       <Table isStriped aria-label="Storage Data Table">
         <Thead>
           <Tr>
@@ -102,6 +108,11 @@ const StorageTable = () => {
             );
           })}
       </Table>
+      <RenderPagination
+        items={pagination.total}
+        page={pagination.currentPage}
+        perPage={size}
+      />
     </>
   );
 };

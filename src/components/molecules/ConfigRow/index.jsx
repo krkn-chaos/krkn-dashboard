@@ -15,7 +15,7 @@ const ConfigRow = (props) => {
     if (key === "parameters" && typeof value === "object" && value !== null) {
       return Object.keys(value).map((paramKey) => (
         <Tr key={`${doc.config.id}-${paramKey}`}>
-          <Td>{paramKey}</Td>
+          <Td>{paramKey === "krkn_pod_recovery_time"?"Expected Recovery Time":paramKey}</Td>
           <Td>{JSON.stringify(value[paramKey])}</Td>
         </Tr>
       ));
