@@ -1,30 +1,22 @@
 // server/index.js
 import * as path from "path";
 
+
+import { ElasticsearchService } from "./elasticsearchService.js";
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
 import cors from "cors";
+import { saveConfig, getConfig, getResults, deleteConfig, savePodDetails } from "./db.js";
 import express from "express";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import multer from "multer";
 import process from "process";
-import sqlite3 from "sqlite3";
 import stripAnsi from "strip-ansi";
 
-sqlite3.verbose();
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
-
-const databaseDirectory = __dirname + "/../database/krkn.db";
-const db = new sqlite3.Database(
-  databaseDirectory,
-  sqlite3.OPEN_READWRITE,
-  (err) => {
-    if (err) return console.error(err);
-  }
-);
 
 const PORT = 8000;
 const app = express();
@@ -194,126 +186,38 @@ app.get("/getPodmanStatus", (req, res) => {
     res.end();
   });
 });
-let sql = "";
-
-db.exec(`CREATE TABLE IF NOT EXISTS test (
-    id INTEGER PRIMARY KEY,
-    movie varchar(50),
-    quote varchar(50),
-    char varchar(50)
-  );`);
-
-// db.exec(`DROP TABLE config`);
-db.exec(`CREATE TABLE IF NOT EXISTS config (
-    id INTEGER PRIMARY KEY,
-    name varchar(50),
-    params json
-  );`);
-// db.exec(`DROP TABLE details`);
-db.exec(`CREATE TABLE IF NOT EXISTS details (
-    container_id varchar(250) PRIMARY KEY,
-    image varchar(150),
-    mounts varchar(100),
-    state varchar(20),
-    status varchar(10),
-    name varchar(50),
-    content TEXT
-  );`);
-
-app.post("/saveConfig", (req, res) => {
+app.post("/saveConfig", async (req, res) => {
   try {
     const { name, params } = req.body.params;
-
-    sql = `INSERT INTO config(name, params) VALUES (?,?)`;
-    db.run(sql, [name, JSON.stringify(params)], (err) => {
-      if (err) {
-        console.log(err);
-        return res.json({
-          status: 300,
-          message: "error inserting params",
-          error: err,
-        });
-      }
-      console.log("successful insertion");
-      return res.json({
-        status: 200,
-        message: "Config saved successfully",
-      });
-    });
+    const result = await saveConfig(name, params);
+    return res.json(result);
   } catch (error) {
-    return res.json({
-      status: 400,
-      message: false,
-    });
+    return res.json(error);
   }
 });
 
-app.get("/getConfig", (req, res) => {
+app.get("/getConfig", async (req, res) => {
   try {
-    sql = `SELECT * FROM config`;
-    db.all(sql, [], (err, rows) => {
-      if (err) {
-        return res.json({
-          status: 300,
-          message: "error geting the config",
-          error: err,
-        });
-      }
-
-      return res.json({
-        status: 200,
-        message: rows,
-      });
-    });
+    const result = await getConfig();
+    return res.json(result);
   } catch (error) {
-    return res.json({
-      status: 400,
-      message: false,
-    });
+    return res.json(error);
   }
 });
-app.get("/getResults", (req, res) => {
+app.get("/getResults", async (req, res) => {
   try {
-    sql = `SELECT * FROM details`;
-    db.all(sql, [], (err, rows) => {
-      if (err) {
-        return res.json({
-          status: 300,
-          message: "error getting details",
-          error: err,
-        });
-      }
-
-      return res.json({
-        status: 200,
-        message: rows,
-      });
-    });
+    const result = await getResults();
+    return res.json(result);
   } catch (error) {
-    return res.json({
-      status: 400,
-      message: false,
-    });
+    return res.json(error);
   }
 });
-app.post("/deleteConfig", (req, res) => {
+app.post("/deleteConfig", async (req, res) => {
   try {
-    sql = `DELETE FROM config WHERE id=(?)`;
-    db.run(sql, [req.body.params], (err) => {
-      if (err) {
-        console.log(err);
-        return res.json({ status: 300, message: "error", error: err });
-      }
-      return res.json({
-        status: 200,
-        message: "Deleted!",
-      });
-    });
+    const result = await deleteConfig(req.body.params);
+    return res.json(result);
   } catch (error) {
-    return res.json({
-      status: 400,
-      message: false,
-    });
+    return res.json(error);
   }
 });
 const frame = async (status, podName) => {
@@ -339,32 +243,24 @@ const myFunc = (podName) => {
     }
   });
 };
-const savePodDetails = (podName, fileContent) => {
+const savePodDetailsToFile = async (podName, fileContent) => {
   const command = `${PODMAN} inspect ${podName} `;
-  child_process.exec(command, (err, stdout, stderr) => {
+  child_process.exec(command, async (err, stdout, stderr) => {
     if (stdout) {
-      sql = `INSERT INTO details(container_id, image, mounts, state, status, name, content) VALUES (?,?,?,?,?,?,?)`;
-      const d = JSON.parse(stdout);
-
-      db.run(
-        sql,
-        [
+      try {
+        const d = JSON.parse(stdout);
+        await savePodDetails(
           d[0].Id,
           d[0].ImageName,
           d[0].Mounts[0].Destination,
           d[0].State.Status,
           d[0].State.ExitCode,
           d[0].Name,
-          fileContent,
-        ],
-        (err) => {
-          if (err) {
-            console.log(err);
-            return;
-          }
-          console.log("successful insertion");
-        }
-      );
+          fileContent
+        );
+      } catch (error) {
+        console.log("Error saving pod details:", error);
+      }
     } else if (stderr || err) {
       console.log(err);
     }
@@ -383,7 +279,7 @@ const saveLogs = (podName) => {
 
         // Call function to store in SQLite database
 
-        savePodDetails(podName, data);
+        savePodDetailsToFile(podName, data);
       });
     } else if (stderr) {
       return console.log("cannot save logs error");
@@ -434,6 +330,42 @@ app.post(
   uploadFiles,
   handleFileUploadError
 );
+
+app.post("/connect-es", async (req, res) => {
+  const { host, username, password, use_ssl, index, start_date, end_date, size, offset } = req.body.params;
+  console.log("Received config:", req.body.params);
+  const node = `${use_ssl ? "https" : "https"}://${host}/`;
+
+  const clientOptions = {
+    node,
+    disableProductCheck: true,
+  };
+
+  if (username && password) {
+    clientOptions.auth = { username, password };
+  }
+
+  if (!use_ssl) {
+    clientOptions.ssl = {
+      rejectUnauthorized: false,
+    };
+  }
+  const esClient = new ElasticsearchService({ clientOptions });
+
+  try {
+    const data = await esClient.fetchRunDetails(index, size, start_date, end_date, offset);
+    
+    res.json({
+      message: "Connected to Elasticsearch",
+      results: data,
+      status: 200,
+      
+    });
+  } catch (err) {
+    console.error("Elasticsearch error:", err);
+    res.status(500).json({ message: "Connection failed", error: err.message });
+  }
+});
 
 const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);

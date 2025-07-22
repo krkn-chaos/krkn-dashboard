@@ -12,15 +12,10 @@ Before building, check available releases at: https://github.com/krkn-chaos/krkn
 $ git clone --branch <RELEASE_TAG> --single-branch https://github.com/krkn-chaos/krkn-dashboard.git
 ```
 
-
 ### Method 2: Download release tarball
 ```bash
-# Replace <RELEASE_TAG> with your desired version (e.g., v1.0.0, v2.1.3)
 $ wget https://github.com/krkn-chaos/krkn-dashboard/archive/refs/tags/<RELEASE_TAG>.tar.gz
-$ tar -xzf <RELEASE_TAG>.tar.gz
-$ mv krkn-dashboard-<VERSION_WITHOUT_V> krkn-dashboard  # Note: remove 'v' prefix from folder name
 ```
-
 
 ### Method 3: Clone latest release automatically
 ```bash
