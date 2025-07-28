@@ -56,8 +56,8 @@ const PlotGraph = (props) => {
             x: podNames,
             y: reschedulingTimes,
             marker: {
-              color: "rgba(135, 206, 235, 0.8)",
-              line: { color: "rgba(135, 206, 235, 1)", width: 1 },
+              color: "rgba(173, 216, 230, 0.8)",
+              line: { color: "rgba(173, 216, 230, 1)", width: 1 },
             },
             hovertemplate:
               "<b>%{x}</b><br>" +
@@ -70,8 +70,8 @@ const PlotGraph = (props) => {
             x: podNames,
             y: readinessTimes,
             marker: {
-              color: "rgba(255, 165, 0, 0.8)",
-              line: { color: "rgba(255, 165, 0, 1)", width: 1 },
+              color: "rgba(255, 204, 170, 0.8)",
+              line: { color: "rgba(255, 204, 170, 1)", width: 1 },
             },
             hovertemplate:
               "<b>%{x}</b><br>" +
@@ -79,45 +79,32 @@ const PlotGraph = (props) => {
               "<extra></extra>",
           },
           {
-            type: "scatter",
-            mode: "lines+markers",
+            type: "bar",
+            name: "Expected Recovery Time",
+            x: podNames,
+            y: expectedRecoveryTimes,
+            marker: {
+              color: "rgba(182, 224, 200, 0.8)",
+              line: { color: "rgba(182, 224, 200, 1)", width: 1 },
+            },
+            hovertemplate:
+              "<b>%{x}</b><br>" +
+              "Expected Recovery Time: %{y:.2f}s<br>" +
+              "<extra></extra>",
+          },
+          {
+            type: "bar",
             name: "Total Recovery Time",
             x: podNames,
             y: totalRecoveryTimes,
-            line: {
-              color: "rgba(220, 20, 60, 1)",
-              width: 3,
-              dash: "dash",
-            },
             marker: {
-              color: "rgba(220, 20, 60, 1)",
+              color: "rgba(209, 196, 233, 1)",
               size: 8,
               symbol: "diamond",
             },
             hovertemplate:
               "<b>%{x}</b><br>" +
               "Total Recovery Time: %{y:.2f}s<br>" +
-              "<extra></extra>",
-          },
-          {
-            type: "scatter",
-            mode: "lines+markers",
-            name: "Expected Recovery Time",
-            x: podNames,
-            y: expectedRecoveryTimes,
-            line: {
-              color: "rgba(34, 139, 34, 1)",
-              width: 3,
-              dash: "dot",
-            },
-            marker: {
-              color: "rgba(34, 139, 34, 1)",
-              size: 8,
-              symbol: "circle",
-            },
-            hovertemplate:
-              "<b>%{x}</b><br>" +
-              "Expected Recovery Time: %{y:.2f}s<br>" +
               "<extra></extra>",
           },
         ]}
@@ -148,7 +135,7 @@ const PlotGraph = (props) => {
             xanchor: "left",
             x: 1.02,
           },
-          hovermode: "x unified",
+          hovermode: "x",
           margin: { l: 60, r: 150, t: 80, b: 80 },
           plot_bgcolor: "rgba(0,0,0,0)",
           paper_bgcolor: "rgba(0,0,0,0)",
