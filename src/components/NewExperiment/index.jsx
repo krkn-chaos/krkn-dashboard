@@ -12,7 +12,7 @@ import {
   Title,
 } from "@patternfly/react-core";
 import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useEffect, useSelector } from "react-redux";
 
 import KubeconfigFileUpload from "@/components/molecules/FileUpload";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
@@ -111,6 +111,28 @@ const NewExperiment = () => {
     },
   });
 
+  useEffect(() => {
+    const scenarioData = data[scenarioChecked];
+    const scenarioParams = paramsList[scenarioChecked];
+
+    if (!scenarioParams) {
+      setIsBtnDisabled(true);
+      return;
+    }
+    const requiredFieldKeys = scenarioParams
+      .filter((param) => param.isRequired)
+      .map((param) => param.key);
+
+    const allRequiredFilled = requiredFieldKeys.every((key) => {
+      const value = scenarioData[key];
+      return (
+        value !== null && value !== undefined && value.toString().trim() !== ""
+      );
+    });
+
+    setIsBtnDisabled(!allRequiredFilled);
+  }, [data, scenarioChecked]);
+
   const changeHandler = (_event, value, key) => {
     setData((prevSatate) => ({
       ...data,
@@ -119,17 +141,9 @@ const NewExperiment = () => {
         [key]: value,
       },
     }));
-    console.log(scenarioChecked);
-    checkBtnDisabled();
   };
-  const checkBtnDisabled = () => {
-    const isFull = Object.values(data[scenarioChecked]).every(
-      (x) => x !== null || x !== ""
-    );
-    setIsBtnDisabled(!isFull);
-  };
+
   const sendData = async () => {
-    console.log(scenarioChecked);
     await dispatch(startKraken(data[scenarioChecked]));
   };
 
