@@ -1,13 +1,19 @@
 // server/index.js
 import * as path from "path";
 
+import {
+  deleteConfig,
+  getConfig,
+  getResults,
+  saveConfig,
+  savePodDetails,
+} from "./db.js";
 
 import { ElasticsearchService } from "./elasticsearchService.js";
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
 import cors from "cors";
-import { saveConfig, getConfig, getResults, deleteConfig, savePodDetails } from "./db.js";
 import express from "express";
 import { fileURLToPath } from "url";
 import fs from "fs";
@@ -332,7 +338,17 @@ app.post(
 );
 
 app.post("/connect-es", async (req, res) => {
-  const { host, username, password, use_ssl, index, start_date, end_date, size, offset } = req.body.params;
+  const {
+    host,
+    username,
+    password,
+    use_ssl,
+    index,
+    start_date,
+    end_date,
+    size,
+    offset,
+  } = req.body.params;
   console.log("Received config:", req.body.params);
   const node = `${use_ssl ? "https" : "https"}://${host}/`;
 
@@ -353,13 +369,18 @@ app.post("/connect-es", async (req, res) => {
   const esClient = new ElasticsearchService({ clientOptions });
 
   try {
-    const data = await esClient.fetchRunDetails(index, size, start_date, end_date, offset);
-    
+    const data = await esClient.fetchRunDetails(
+      index,
+      size,
+      start_date,
+      end_date,
+      offset
+    );
+
     res.json({
       message: "Connected to Elasticsearch",
       results: data,
       status: 200,
-      
     });
   } catch (err) {
     console.error("Elasticsearch error:", err);
@@ -422,9 +443,9 @@ io.on("connection", (socket) => {
         const podData = JSON.parse(stdout);
 
         // Filter only pods whose image contains "krkn-hub"
-        const filteredPods = podData.filter((pod) =>
-          pod.Image.includes("krkn-hub")
-        );
+        const filteredPods = podData
+          .filter((pod) => pod.Image.includes("krkn-hub"))
+          .sort((a, b) => new Date(b.Created) - new Date(a.Created));
 
         socket.emit("podStatus", filteredPods);
       } catch (parseError) {
