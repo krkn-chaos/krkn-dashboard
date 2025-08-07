@@ -85,6 +85,11 @@ export class ElasticsearchService {
       target_namespace,
       cloud_type,
       scenarios = [],
+      node_summary_infos,
+      network_plugins,
+      total_node_count,
+      cluster_version,
+      kubernetes_objects_count,
     } = source;
 
     const scenario = scenarios[0] || {};
@@ -98,12 +103,17 @@ export class ElasticsearchService {
       scenario_type: scenario.scenario_type || "unknown",
       status: scenario.exit_status || job_status || "unknown",
       namespace: namespace || target_namespace || "default",
+      node_summary_infos: node_summary_infos || [],
+      kubernetes_objects_count,
 
       config: {
         id: parameters.id || "unknown",
         parameters: parameters.config || {},
         cloud_infrastructure,
         cloud_type,
+        network_plugins: network_plugins || [],
+        total_node_count: total_node_count || 0,
+        cluster_version: cluster_version,
       },
 
       affected_pods: [],
