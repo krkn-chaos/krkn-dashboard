@@ -1,15 +1,15 @@
 import { Card, CardBody } from "@patternfly/react-core";
 
+import KubeletGraph from "@/components/atoms/PlotGraph/KubeletGraph";
 import PlotGraph from "@/components/atoms/PlotGraph";
 import PropTypes from "prop-types";
 import React from "react";
 
 const GraphRow = (props) => {
-  const { affected_pods } = props.doc;
+  const { affected_pods, kubernetes_objects_count } = props.doc;
   const recoveredPods = affected_pods.filter(
     (pod) => pod.status === "recovered"
   );
-
   return (
     <Card>
       <CardBody>
@@ -35,6 +35,12 @@ const GraphRow = (props) => {
           </div>
         )}
       </CardBody>
+
+      {Object.keys(kubernetes_objects_count).length > 0 && (
+        <CardBody>
+          <KubeletGraph data={kubernetes_objects_count} />
+        </CardBody>
+      )}
     </Card>
   );
 };
