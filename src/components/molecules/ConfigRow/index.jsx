@@ -1,6 +1,9 @@
+import "./index.less";
+
 import { Card, CardBody, Title } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 
+import NodeCard from "@/components/organisms/NodeCard";
 import PropTypes from "prop-types";
 import React from "react";
 
@@ -15,7 +18,11 @@ const ConfigRow = (props) => {
     if (key === "parameters" && typeof value === "object" && value !== null) {
       return Object.keys(value).map((paramKey) => (
         <Tr key={`${doc.config.id}-${paramKey}`}>
-          <Td>{paramKey === "krkn_pod_recovery_time"?"Expected Recovery Time":paramKey}</Td>
+          <Td>
+            {paramKey === "krkn_pod_recovery_time"
+              ? "Expected Recovery Time"
+              : paramKey}
+          </Td>
           <Td>{JSON.stringify(value[paramKey])}</Td>
         </Tr>
       ));
@@ -43,7 +50,7 @@ const ConfigRow = (props) => {
           className="box"
           aria-label="metadata-table"
           ouiaId="metadata-table"
-          isCompact
+          variant="compact"
         >
           <Thead>
             <Tr>
@@ -59,6 +66,14 @@ const ConfigRow = (props) => {
               .map((key) => renderConfigValue(key, doc.config[key]))}
           </Tbody>
         </Table>
+        <Title headingLevel="h4" className="type_heading node_summary_heading">
+          Node Summary Info
+        </Title>
+        <div className="node-card-wrapper">
+          {doc.node_summary_infos.map((item, idx) => (
+            <NodeCard key={idx} summary={item} />
+          ))}
+        </div>
       </CardBody>
     </Card>
   );
