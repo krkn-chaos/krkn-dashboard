@@ -21,3 +21,27 @@ export const formatDate = (input) => {
   const day = String(d.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+
+/**
+ * Build the url with query params*
+ * @function
+ * @param {Object} queryObj - Query
+ * @param {string} toPage - new page to be navigated
+ * @return {string} - update the url with the query string
+ */
+
+export const appendQueryString = (queryObj, navigate, toPage) => {
+  const validQueryObj = Object.fromEntries(
+    Object.entries(queryObj).filter(
+      // eslint-disable-next-line no-unused-vars
+      ([_, value]) => value !== null && value !== undefined && value !== ""
+    )
+  );
+
+  const queryString = new URLSearchParams(validQueryObj).toString();
+
+  navigate({
+    pathname: toPage ? toPage : window.location.pathname,
+    search: `?${queryString}`,
+  });
+};

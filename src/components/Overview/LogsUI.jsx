@@ -1,8 +1,9 @@
 import React from "react";
-import { SelectBasic } from "@/components/atoms/SelectBox/SelectBox";
+import SelectBox from "@/components/atoms/SelectBox";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useSelector } from "react-redux";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+
 const LogsUI = () => {
   const { logs, podDetailsList } = useSelector((state) => state.experiment);
   const fullLog = logs && Array.isArray(logs) ? logs.join("\n") : logs;
@@ -17,11 +18,11 @@ const LogsUI = () => {
   } catch (e) {
     isJson = false;
   }
-
+  const { selectedPod } = useSelector((state) => state.log);
   return (
     <div className="logs-wrapper">
       <div className="margin-top">Select to view the logs</div>
-      <SelectBasic options={podDetailsList} />
+      <SelectBox options={podDetailsList} selected={selectedPod} />
       <div className="logs-container" style={{ padding: "1rem" }}>
         {isJson ? (
           <SyntaxHighlighter language="json" style={vscDarkPlus}>

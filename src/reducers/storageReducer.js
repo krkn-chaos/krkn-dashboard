@@ -24,11 +24,25 @@ const initialState = {
     hasNext: false,
     hasPrevious: false,
   },
+  filterData: [],
   connectionInfo: {
     host: "",
     index: "",
     isConnected: false,
   },
+  tableFilters: [
+    { name: "Status", value: "job_status" },
+    { name: "Cloud Infrastructure", value: "cloud_infrastructure" },
+    { name: "Version", value: "major_version" },
+  ],
+  selectedFilters: [
+    { name: "job_status", value: [] },
+    { name: "cloud_infrastructure", value: [] },
+    { name: "major_version", value: [] },
+  ],
+  categoryFilterValue: "",
+  filterOptions: [],
+  appliedFilters: {},
 };
 
 const StorageReducer = (state = initialState, action = {}) => {
@@ -37,7 +51,7 @@ const StorageReducer = (state = initialState, action = {}) => {
     case TYPES.SET_STORAGE_DATA: {
       return {
         ...state,
-        results: payload.data || payload, // Handle both new format and old format
+        results: payload.data || payload,
         pagination: payload.pagination || state.pagination,
       };
     }
@@ -96,6 +110,16 @@ const StorageReducer = (state = initialState, action = {}) => {
           currentPage: payload,
         },
       };
+    case TYPES.SET_CATEGORY_FILTER:
+      return { ...state, categoryFilterValue: payload };
+    case TYPES.SET_FILTER_DATA:
+      return { ...state, filterData: payload };
+    case TYPES.SET_FILTER_OPTIONS:
+      return { ...state, filterOptions: payload };
+    case TYPES.SET_SELECTED_FILTERS:
+      return { ...state, selectedFilters: payload };
+    case TYPES.SET_APPLIED_FILTERS:
+      return { ...state, appliedFilters: payload };
     default:
       return state;
   }

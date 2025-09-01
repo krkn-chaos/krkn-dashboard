@@ -348,6 +348,7 @@ app.post("/connect-es", async (req, res) => {
     end_date,
     size,
     offset,
+    filters,
   } = req.body.params;
   console.log("Received config:", req.body.params);
   const node = `${use_ssl ? "https" : "https"}://${host}/`;
@@ -374,7 +375,8 @@ app.post("/connect-es", async (req, res) => {
       size,
       start_date,
       end_date,
-      offset
+      offset,
+      filters
     );
 
     res.json({
