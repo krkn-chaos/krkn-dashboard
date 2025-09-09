@@ -87,6 +87,12 @@ export class ElasticsearchService {
             major_version: {
               terms: { field: "major_version.keyword" },
             },
+            cloud_infrastructure: {
+              terms: { field: "cloud_infrastructure.keyword" },
+            },
+            cloud_type: {
+              terms: { field: "cloud_type.keyword" },
+            },
           },
         },
       });
@@ -196,6 +202,7 @@ const NAME_MAP = {
   job_status: "Status",
   major_version: "Version",
   cloud_infrastructure: "Cloud Infrastructure",
+  cloud_type: "Cloud Type",
 };
 
 export const parseFilters = (aggregations) => {

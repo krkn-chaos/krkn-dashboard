@@ -13,7 +13,14 @@ export const esConnect = (data) => async (dispatch, getState) => {
       payload: [],
     });
     const state = getState().storage;
-    const { start_date, end_date, size, offset, appliedFilters } = state;
+    const {
+      start_date,
+      end_date,
+      size,
+      offset,
+      appliedFilters,
+      connectionInfo,
+    } = state;
     const response = await API.post("/connect-es", {
       params: {
         ...data,
@@ -25,7 +32,9 @@ export const esConnect = (data) => async (dispatch, getState) => {
       },
     });
     if (response.data.status === 200) {
-      dispatch(showToast("success", "Connected to the instance"));
+      if (!connectionInfo.isConnected) {
+        dispatch(showToast("success", "Connected to the instance"));
+      }
       dispatch({
         type: TYPES.SHOW_ES_CARD,
         payload: false,

@@ -61,7 +61,7 @@ const StorageTableFilter = (props) => {
           <ToolbarItem style={{ marginInlineEnd: 0 }}>
             <SelectBasic
               options={filterData}
-              selected={categoryFilterValue ?? "Select"}
+              selected={categoryFilterValue || "Select the Category"}
               icon={<FilterIcon />}
               width={"200px"}
               type="test"

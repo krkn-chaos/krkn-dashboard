@@ -33,12 +33,14 @@ const initialState = {
   tableFilters: [
     { name: "Status", value: "job_status" },
     { name: "Cloud Infrastructure", value: "cloud_infrastructure" },
+    { name: "Cloud Type", value: "cloud_type" },
     { name: "Version", value: "major_version" },
   ],
   selectedFilters: [
     { name: "job_status", value: [] },
     { name: "cloud_infrastructure", value: [] },
     { name: "major_version", value: [] },
+    { name: "cloud_type", value: [] },
   ],
   categoryFilterValue: "",
   filterOptions: [],
