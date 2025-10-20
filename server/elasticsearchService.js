@@ -6,7 +6,14 @@ export class ElasticsearchService {
     this.client = new Client(clientOptions);
   }
 
-  async fetchRunDetails(index, size = 25, start_date, end_date, offset = 0) {
+  async fetchRunDetails(
+    index,
+    size = 25,
+    start_date,
+    end_date,
+    offset = 0,
+    appliedFilters = {}
+  ) {
     try {
       const info = await this.client.info();
       console.log("Connected to ES:", info);
@@ -16,6 +23,53 @@ export class ElasticsearchService {
         throw new Error("Elasticsearch ping failed");
       }
 
+      const queryFilter = [
+        {
+          range: {
+            timestamp: {
+              format: "yyyy-MM-dd",
+              gte: start_date,
+              lte: end_date,
+            },
+          },
+        },
+        {
+          match: {
+            "scenarios.scenario_type": "pod_disruption_scenarios",
+          },
+        },
+      ];
+
+      if (appliedFilters && Object.keys(appliedFilters).length > 0) {
+        const shouldClauses = [];
+        let uniqueKeysCount = 0;
+
+        for (const [key, values] of Object.entries(appliedFilters)) {
+          if (Array.isArray(values) && values.length > 0) {
+            uniqueKeysCount++;
+
+            const fieldName = key === "version" ? "major_version.keyword" : key;
+
+            values.forEach((value) => {
+              shouldClauses.push({
+                match: {
+                  [fieldName]: value,
+                },
+              });
+            });
+          }
+        }
+
+        if (shouldClauses.length > 0) {
+          queryFilter.push({
+            bool: {
+              should: shouldClauses,
+              minimum_should_match: uniqueKeysCount,
+            },
+          });
+        }
+      }
+      console.log(queryFilter);
       const result = await this.client.search({
         index: index ? index : "*",
         size,
@@ -23,22 +77,21 @@ export class ElasticsearchService {
         body: {
           query: {
             bool: {
-              filter: [
-                {
-                  range: {
-                    timestamp: {
-                      format: "yyyy-MM-dd",
-                      gte: start_date,
-                      lte: end_date,
-                    },
-                  },
-                },
-                {
-                  match: {
-                    "scenarios.scenario_type": "pod_disruption_scenarios",
-                  },
-                },
-              ],
+              filter: queryFilter,
+            },
+          },
+          aggs: {
+            job_status: {
+              terms: { field: "job_status" },
+            },
+            major_version: {
+              terms: { field: "major_version.keyword" },
+            },
+            cloud_infrastructure: {
+              terms: { field: "cloud_infrastructure.keyword" },
+            },
+            cloud_type: {
+              terms: { field: "cloud_type.keyword" },
             },
           },
         },
@@ -50,9 +103,10 @@ export class ElasticsearchService {
           this.parseRunDetails(hit._source, hit._id)
         )
       );
-
+      const filters = parseFilters(result.body.aggregations);
       return {
         data: parsedData,
+        filters: filters,
         pagination: {
           total: result.body.hits.total.value || result.body.hits.total,
           size: size,
@@ -154,3 +208,26 @@ export class ElasticsearchService {
     return parsedData;
   }
 }
+const NAME_MAP = {
+  job_status: "Status",
+  major_version: "Version",
+  cloud_infrastructure: "Cloud Infrastructure",
+  cloud_type: "Cloud Type",
+};
+
+export const parseFilters = (aggregations) => {
+  if (!aggregations) {
+    return [];
+  }
+  return Object.entries(aggregations).map(([filterKey, aggregationData]) => {
+    const values = aggregationData.buckets.map((bucket) => {
+      return bucket.key_as_string ?? String(bucket.key);
+    });
+
+    return {
+      key: filterKey,
+      value: values,
+      name: NAME_MAP[filterKey],
+    };
+  });
+};

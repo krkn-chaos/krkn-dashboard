@@ -1,6 +1,8 @@
 import * as TYPES from "./types";
 
 import API from "@/utils/axiosInstance";
+import { appendQueryString } from "@/utils/helper.js";
+import { cloneDeep } from "lodash";
 import { showToast } from "./toastActions";
 
 export const esConnect = (data) => async (dispatch, getState) => {
@@ -11,7 +13,14 @@ export const esConnect = (data) => async (dispatch, getState) => {
       payload: [],
     });
     const state = getState().storage;
-    const { start_date, end_date, size, offset } = state;
+    const {
+      start_date,
+      end_date,
+      size,
+      offset,
+      appliedFilters,
+      connectionInfo,
+    } = state;
     const response = await API.post("/connect-es", {
       params: {
         ...data,
@@ -19,10 +28,13 @@ export const esConnect = (data) => async (dispatch, getState) => {
         offset,
         start_date: start_date,
         end_date: end_date,
+        ...(appliedFilters && { filters: appliedFilters }),
       },
     });
     if (response.data.status === 200) {
-      dispatch(showToast("success", "Connected to the instance"));
+      if (!connectionInfo.isConnected) {
+        dispatch(showToast("success", "Connected to the instance"));
+      }
       dispatch({
         type: TYPES.SHOW_ES_CARD,
         payload: false,
@@ -41,6 +53,10 @@ export const esConnect = (data) => async (dispatch, getState) => {
           password: data.password,
         },
       });
+      dispatch({
+        type: TYPES.SET_FILTER_DATA,
+        payload: response.data.results.filters,
+      });
     }
   } catch (error) {
     dispatch({
@@ -55,8 +71,9 @@ export const esConnect = (data) => async (dispatch, getState) => {
         isConnected: false,
       },
     });
-    
-    const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
+
+    const errorMessage =
+      error.response?.data?.message || error.message || "Something went wrong";
     dispatch(showToast("danger", "Connection failed", errorMessage));
   } finally {
     dispatch({ type: TYPES.COMPLETED });
@@ -139,4 +156,64 @@ export const fetchStorageData = () => async (dispatch, getState) => {
   } finally {
     dispatch({ type: TYPES.COMPLETED });
   }
+};
+export const getSelectedFilter =
+  (selectedCategory, selectedOption) => (dispatch, getState) => {
+    const selectedFilters = cloneDeep(getState().storage.selectedFilters);
+
+    const obj = selectedFilters.find((i) => i.name === selectedCategory);
+
+    const objValue = obj.value;
+    if (objValue.includes(selectedOption)) {
+      const arr = objValue.filter((selection) => selection !== selectedOption);
+      obj.value = arr;
+    } else {
+      obj.value = [...obj.value, selectedOption];
+    }
+
+    return selectedFilters;
+  };
+export const setCatFilters = (category) => (dispatch, getState) => {
+  const filterData = [...getState().storage.filterData];
+  const options = filterData.filter((item) => item.name === category)[0].value;
+  const list = options.map((item) => ({ name: item, value: item }));
+
+  dispatch({
+    type: TYPES.SET_CATEGORY_FILTER,
+    payload: category,
+  });
+  dispatch({
+    type: TYPES.SET_FILTER_OPTIONS,
+    payload: list,
+  });
+};
+
+export const setSelectedFilter =
+  (selectedCategory, selectedOption) => (dispatch) => {
+    const selectedFilters = dispatch(
+      getSelectedFilter(selectedCategory, selectedOption)
+    );
+    dispatch({
+      type: TYPES.SET_SELECTED_FILTERS,
+      payload: selectedFilters,
+    });
+  };
+export const setAppliedFilters = (navigate) => (dispatch, getState) => {
+  const { start_date, end_date, selectedFilters, connectionInfo } =
+    getState().storage;
+  const appliedFilterArr = selectedFilters.filter((i) => i.value.length > 0);
+
+  const appliedFilters = {};
+  appliedFilterArr.forEach((item) => {
+    appliedFilters[item["name"]] = item.value;
+  });
+
+  dispatch({
+    type: TYPES.SET_APPLIED_FILTERS,
+    payload: appliedFilters,
+  });
+  appendQueryString({ ...appliedFilters, start_date, end_date }, navigate);
+  // dispatch(applyFilters());
+
+  dispatch(esConnect(connectionInfo));
 };
