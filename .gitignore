@@ -24,3 +24,8 @@ database/*
 *.njsproj
 *.sln
 *.sw?
+
+venv/
+.env/
+env/
+.venv/

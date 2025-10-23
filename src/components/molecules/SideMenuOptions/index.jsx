@@ -37,6 +37,12 @@ const sideMenuOptions = [
     displayName: "Metrics",
     icon: <CatalogIcon />,
   },
+  {
+    id: 5,
+    key: "summary",
+    displayName: "Summary",
+    icon: <CatalogIcon />,
+  },
 ];
 
 const MenuOptions = () => {

@@ -12,6 +12,7 @@ import Overview from "@/components/Overview";
 import Results from "@/components/template/Results";
 import { checkPodmanInstalled } from "@/actions/newExperiment.js";
 import { useDispatch } from "react-redux";
+import Summary from "@/components/template/Summary";
 
 function App() {
   const dispatch = useDispatch();
@@ -27,6 +28,7 @@ function App() {
             <Route path={APP_ROUTES.EXPERIMENTS} element={<Experiments />} />
             <Route path={APP_ROUTES.RESULTS} element={<Results />} />
             <Route path={APP_ROUTES.METRICS} element={<MetricsStorage />} />
+             <Route path={APP_ROUTES.SUMMARY} element={<Summary />} />
             <Route index element={<Overview />} />
           </Route>
         </Routes>
