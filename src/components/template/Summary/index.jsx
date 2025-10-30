@@ -8,10 +8,13 @@ import ScenarioChart from "@/components/organisms/SummaryPageCharts/ScenarioChar
 import CloudCharts from "@/components/organisms/SummaryPageCharts/CloudCharts";
 import MajorVersionCharts from "@/components/organisms/SummaryPageCharts/VersionChart";
 import ScenarioRiskTable from "@/components/molecules/ScenarioRiskTable";
+import StorageTableFilter from "@/components/molecules/StorageTableFilter";
 
 const Summary = () => {
 	const dispatch = useDispatch();
-	const { aggregations } = useSelector((state) => state.summary);
+	const { aggregations, start_date, end_date } = useSelector(
+		(state) => state.summary
+	);
 	useEffect(() => {
 		dispatch(fetchSummaryData());
 	}, [dispatch]);
@@ -23,11 +26,16 @@ const Summary = () => {
 	};
 	return (
 		<>
-			<Card>
-				<CardBody>
-					<Grid hasGutter>
-						{aggregations?.summary &&
-							Object.entries(aggregations.summary).map(([key, value]) => {
+			{aggregations?.summary && (
+				<Card>
+					<CardBody>
+						<StorageTableFilter
+							start_date={start_date}
+							end_date={end_date}
+							type={"summary"}
+						/>
+						<Grid hasGutter>
+							{Object.entries(aggregations.summary).map(([key, value]) => {
 								return (
 									<GridItem key={key} span={3}>
 										<MetricCard
@@ -38,9 +46,10 @@ const Summary = () => {
 									</GridItem>
 								);
 							})}
-					</Grid>
-				</CardBody>
-			</Card>
+						</Grid>
+					</CardBody>
+				</Card>
+			)}
 			<Grid hasGutter>
 				{Object.keys(aggregations).length > 0 && (
 					<>

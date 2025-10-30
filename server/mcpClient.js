@@ -142,10 +142,42 @@ import axios from "axios";
 // }
 
 export const fetchMcpAnalysis = async (params) => {
-	const { es_url, username, password, es_index, start_date, end_date } = params;
+	const {
+		es_url,
+		username,
+		password,
+		es_index,
+		start_date,
+		end_date,
+		filters,
+	} = params;
 	const mcp_url = "http://localhost:5000/analyze";
 	try {
 		console.log("I'm called here");
+		const response = await axios.post(mcp_url, {
+			es_url,
+			es_index,
+			username,
+			password,
+			start_date,
+			end_date,
+			size: 100,
+			offset: 0,
+			filters,
+		});
+
+		return response.data;
+	} catch (error) {
+		console.error("MCP API error:", error.response?.data || error.message);
+		throw new Error("Failed to fetch MCP analysis data.");
+	}
+};
+
+export const fetchMcpAlerts = async (params) => {
+	const { es_url, username, password, es_index, start_date, end_date } = params;
+	const mcp_url = "http://localhost:5000/alerts";
+	try {
+		console.log("I'm alerts called here");
 		const response = await axios.post(mcp_url, {
 			es_url,
 			es_index,

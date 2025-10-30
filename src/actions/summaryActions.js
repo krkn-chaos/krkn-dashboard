@@ -7,14 +7,16 @@ export const fetchSummaryData = () => async (dispatch, getState) => {
 		const state = getState().storage;
 		const size = 10,
 			offset = 0;
-		const { connectionInfo } = state;
+		const { connectionInfo, appliedFilters } = state;
+		const { start_date, end_date } = getState().summary;
 		const response = await API.post("/summary", {
 			params: {
 				...connectionInfo,
 				size,
 				offset,
-				start_date: "2025-10-01",
-				end_date: "2025-10-05",
+				start_date,
+				end_date,
+				...(appliedFilters && { filters: appliedFilters }),
 			},
 		});
 		if (response.status === 200) {
@@ -32,3 +34,12 @@ export const fetchSummaryData = () => async (dispatch, getState) => {
 	}
 	dispatch({ type: TYPES.COMPLETED });
 };
+
+export const setSummaryDateRange =
+	(start_date, end_date) => async (dispatch) => {
+		dispatch({
+			type: TYPES.SET_SUMMARY_DATE_RANGE,
+			payload: { start_date, end_date },
+		});
+		await dispatch(fetchSummaryData());
+	};

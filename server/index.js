@@ -20,7 +20,7 @@ import fs from "fs";
 import multer from "multer";
 import process from "process";
 import stripAnsi from "strip-ansi";
-import { fetchMcpAnalysis } from "./mcpClient.js";
+import { fetchMcpAnalysis, fetchMcpAlerts } from "./mcpClient.js";
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
 
@@ -400,9 +400,41 @@ app.post("/summary", async (req, res) => {
       end_date,
       size,
       offset,
+      filters,
     } = req.body.params;
 
     const summary = await fetchMcpAnalysis({
+      es_url: `https://${host}`,
+      es_index: index,
+      username,
+      password,
+      index,
+      start_date,
+      end_date,
+      size,
+      offset,
+      filters,
+    });
+    console.log("Im here");
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ message: "Connection failed", error: err.message });
+  }
+});
+app.post("/alertsAnalysis", async (req, res) => {
+  try {
+    const {
+      host,
+      username,
+      password,
+      index,
+      start_date,
+      end_date,
+      size,
+      offset,
+    } = req.body.params;
+
+    const summary = await fetchMcpAlerts({
       es_url: `https://${host}`,
       es_index: index,
       username,

@@ -12,29 +12,29 @@ import Overview from "@/components/Overview";
 import Results from "@/components/template/Results";
 import { checkPodmanInstalled } from "@/actions/newExperiment.js";
 import { useDispatch } from "react-redux";
-import Summary from "@/components/template/Summary";
+import Analysis from "@/components/template/Analysis";
 
 function App() {
-  const dispatch = useDispatch();
-  useEffect(() => {
-    dispatch(checkPodmanInstalled());
-  }, []);
-  return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route element={<MainLayout />}>
-            <Route path={APP_ROUTES.OVERVIEW} element={<Overview />} />
-            <Route path={APP_ROUTES.EXPERIMENTS} element={<Experiments />} />
-            <Route path={APP_ROUTES.RESULTS} element={<Results />} />
-            <Route path={APP_ROUTES.METRICS} element={<MetricsStorage />} />
-             <Route path={APP_ROUTES.SUMMARY} element={<Summary />} />
-            <Route index element={<Overview />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
-  );
+	const dispatch = useDispatch();
+	useEffect(() => {
+		dispatch(checkPodmanInstalled());
+	}, []);
+	return (
+		<div className="App">
+			<BrowserRouter>
+				<Routes>
+					<Route element={<MainLayout />}>
+						<Route path={APP_ROUTES.OVERVIEW} element={<Overview />} />
+						<Route path={APP_ROUTES.EXPERIMENTS} element={<Experiments />} />
+						<Route path={APP_ROUTES.RESULTS} element={<Results />} />
+						<Route path={APP_ROUTES.METRICS} element={<MetricsStorage />} />
+						<Route path={APP_ROUTES.SUMMARY} element={<Analysis />} />
+						<Route index element={<Overview />} />
+					</Route>
+				</Routes>
+			</BrowserRouter>
+		</div>
+	);
 }
 
 export default App;

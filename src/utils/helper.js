@@ -6,20 +6,20 @@
  */
 
 export const formatDateTime = (dateTimeStamp) => {
-  const dateObj = new Date(dateTimeStamp);
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(dateObj);
+	const dateObj = new Date(dateTimeStamp);
+	return new Intl.DateTimeFormat("en-US", {
+		dateStyle: "medium",
+		timeStyle: "short",
+	}).format(dateObj);
 };
 
 export const formatDate = (input) => {
-  const d = new Date(input);
-  if (isNaN(d)) throw new Error(`Invalid date: ${input}`);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+	const d = new Date(input);
+	if (isNaN(d)) throw new Error(`Invalid date: ${input}`);
+	const year = d.getUTCFullYear();
+	const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(d.getUTCDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
 };
 
 /**
@@ -31,17 +31,25 @@ export const formatDate = (input) => {
  */
 
 export const appendQueryString = (queryObj, navigate, toPage) => {
-  const validQueryObj = Object.fromEntries(
-    Object.entries(queryObj).filter(
-      // eslint-disable-next-line no-unused-vars
-      ([_, value]) => value !== null && value !== undefined && value !== ""
-    )
-  );
+	const validQueryObj = Object.fromEntries(
+		Object.entries(queryObj).filter(
+			// eslint-disable-next-line no-unused-vars
+			([_, value]) => value !== null && value !== undefined && value !== ""
+		)
+	);
 
-  const queryString = new URLSearchParams(validQueryObj).toString();
+	const queryString = new URLSearchParams(validQueryObj).toString();
 
-  navigate({
-    pathname: toPage ? toPage : window.location.pathname,
-    search: `?${queryString}`,
-  });
+	navigate({
+		pathname: toPage ? toPage : window.location.pathname,
+		search: `?${queryString}`,
+	});
+};
+
+// Calculate start_date as 5 days before today
+export const getStartDate = () => {
+	const today = new Date();
+	const fiveDaysAgo = new Date(today);
+	fiveDaysAgo.setDate(today.getDate() - 10);
+	return formatDate(fiveDaysAgo);
 };
