@@ -42,7 +42,7 @@ const MajorVersionCharts = ({ data }) => {
 		if (!data) return [];
 
 		const transformed = data.map((item, index) => {
-			const success = item["0"] || 0;
+			const success = item["1"] || 0;
 			const total = item.total;
 			const successRate = total === 0 ? 0 : (success / total) * 100;
 

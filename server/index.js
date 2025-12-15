@@ -20,7 +20,11 @@ import fs from "fs";
 import multer from "multer";
 import process from "process";
 import stripAnsi from "strip-ansi";
-import { fetchMcpAnalysis, fetchMcpAlerts } from "./mcpClient.js";
+import {
+	fetchMcpAnalysis,
+	fetchMcpAlerts,
+	fetchMcpComparison,
+} from "./mcpClient.js";
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
 
@@ -420,6 +424,40 @@ app.post("/summary", async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Connection failed", error: err.message });
   }
+});
+app.post("/comparison", async (req, res) => {
+	try {
+		const {
+			host,
+			username,
+			password,
+			index,
+			start_date,
+			end_date,
+			size,
+			offset,
+			filters,
+			group_by,
+		} = req.body.params;
+
+		const summary = await fetchMcpComparison({
+			es_url: `https://${host}`,
+			es_index: index,
+			username,
+			password,
+			index,
+			start_date,
+			end_date,
+			size,
+			offset,
+			filters,
+			group_by,
+		});
+		console.log("Im here");
+		res.json(summary);
+	} catch (err) {
+		res.status(500).json({ message: "Connection failed", error: err.message });
+	}
 });
 app.post("/alertsAnalysis", async (req, res) => {
   try {

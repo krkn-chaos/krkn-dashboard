@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.0.1",
+    "@nivo/heatmap": "^0.99.0",
     "@opensearch-project/opensearch": "^3.5.1",
     "@patternfly/patternfly": "^5.3.1",
     "@patternfly/react-core": "^5.3.4",

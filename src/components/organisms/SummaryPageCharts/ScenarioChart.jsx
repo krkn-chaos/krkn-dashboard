@@ -17,8 +17,8 @@ const ScenarioChart = ({ data }) => {
 			.replace(/\b\w/g, (l) => l.toUpperCase())
 			.replace(/ Scenarios?/gi, "")
 			.trim(),
-		success: item["0"],
-		failure: item["1"],
+		success: item?.["1"],
+		failure: item?.["0"],
 	}));
 
 	return (

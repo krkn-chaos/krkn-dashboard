@@ -32,6 +32,7 @@ const StorageTableFilter = (props) => {
 		appliedFilters,
 	} = useSelector((state) => state.storage);
 
+	const { group_by } = useSelector((state) => state.summary);
 	const dateChangeHandler = (date, key) => {
 		if (type === "summary") {
 			dispatch(setSummaryDateRange(date, key));
@@ -69,7 +70,7 @@ const StorageTableFilter = (props) => {
 							options={filterData}
 							selected={categoryFilterValue || "Select the Category"}
 							icon={<FilterIcon />}
-							width={"200px"}
+							width={"250px"}
 							type="test"
 						/>
 					</ToolbarItem>
@@ -83,6 +84,20 @@ const StorageTableFilter = (props) => {
 							width={"300px"}
 						/>
 					</ToolbarItem>
+					{type === "summary" && (
+						<>
+							<ToolbarItem variant="label">Group By</ToolbarItem>
+							<ToolbarItem style={{ marginInlineEnd: 0 }}>
+								<SelectBasic
+									options={filterData}
+									selected={group_by || "Select the Group By"}
+									icon={<FilterIcon />}
+									width={"200px"}
+									type="summary"
+								/>
+							</ToolbarItem>
+						</>
+					)}
 				</ToolbarContent>
 
 				<ToolbarContent className="date-filter" ouiaId="date_filter">
