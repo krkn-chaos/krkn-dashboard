@@ -29,3 +29,5 @@ venv/
 .env/
 env/
 .venv/
+venv312/
+.venv312/
