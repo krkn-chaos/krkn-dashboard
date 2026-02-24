@@ -1,0 +1,44 @@
+name: Test PR dependencies
+
+# Trigger the workflow on pull requests
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'server/**'
+      - 'src/**'
+      - '.github/workflows/test-pr.yml'
+
+jobs:
+  test-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the PR code
+      - name: Checkout PR code
+        uses: actions/checkout@v3
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Verify installation
+      - name: Verify installation
+        run: |
+          echo "✓ Dependencies installed successfully"
+          npm list --depth=0
+
+      # Step 5: Run linting (if applicable)
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: true
