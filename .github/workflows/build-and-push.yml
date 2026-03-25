@@ -64,5 +64,5 @@ jobs:
          image: ${{ steps.build-krkn-dashboard.outputs.image }}
          tags: ${{ steps.build-krkn-dashboard.outputs.tags }}
          registry: quay.io/krkn-chaos
-         username: ${{ secrets.QUAY_USER }}
-         password: ${{ secrets.QUAY_TOKEN }}
+         username: ${{ secrets.QUAY_USERNAME }}
+         password: ${{ secrets.QUAY_PASSWORD }}
