@@ -24,3 +24,12 @@ database/*
 *.njsproj
 *.sln
 *.sw?
+
+venv/
+.env/
+env/
+.venv/
+venv*/
+*/.venv*/
+__pycache__/
+*/__pycache__/

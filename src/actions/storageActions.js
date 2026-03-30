@@ -4,6 +4,7 @@ import API from "@/utils/axiosInstance";
 import { appendQueryString } from "@/utils/helper.js";
 import { cloneDeep } from "lodash";
 import { showToast } from "./toastActions";
+import { fetchSummaryData } from "./summaryActions";
 
 export const esConnect = (data) => async (dispatch, getState) => {
   try {
@@ -57,6 +58,9 @@ export const esConnect = (data) => async (dispatch, getState) => {
         type: TYPES.SET_FILTER_DATA,
         payload: response.data.results.filters,
       });
+      if (window.location.pathname.includes("summary")) {
+        dispatch(fetchSummaryData());
+      }
     }
   } catch (error) {
     dispatch({
@@ -198,7 +202,7 @@ export const setSelectedFilter =
       payload: selectedFilters,
     });
   };
-export const setAppliedFilters = (navigate) => (dispatch, getState) => {
+export const setAppliedFilters = (navigate, type) => (dispatch, getState) => {
   const { start_date, end_date, selectedFilters, connectionInfo } =
     getState().storage;
   const appliedFilterArr = selectedFilters.filter((i) => i.value.length > 0);
@@ -214,6 +218,9 @@ export const setAppliedFilters = (navigate) => (dispatch, getState) => {
   });
   appendQueryString({ ...appliedFilters, start_date, end_date }, navigate);
   // dispatch(applyFilters());
-
-  dispatch(esConnect(connectionInfo));
+  if (type === "summary") {
+    dispatch(fetchSummaryData());
+  } else {
+    dispatch(esConnect(connectionInfo));
+  }
 };

@@ -5,6 +5,7 @@ import StorageReducer from "./storageReducer";
 import ToastReducer from "./toastReducer";
 import { combineReducers } from "redux";
 import experimentReducer from "./experimentReducer";
+import SummaryReducer from "./summaryReducer";
 
 export default combineReducers({
   experiment: experimentReducer,
@@ -13,4 +14,5 @@ export default combineReducers({
   header: HeadReducer,
   log: LogViewReducer,
   storage: StorageReducer,
+  summary: SummaryReducer
 });
