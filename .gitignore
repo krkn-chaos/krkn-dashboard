@@ -29,6 +29,7 @@ venv/
 .env/
 env/
 .venv/
-venv312/
-.venv312/
+venv*/
+*/.venv*/
 __pycache__/
+*/__pycache__/
