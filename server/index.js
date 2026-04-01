@@ -47,6 +47,54 @@ if (process.env.CONTAINER_BUILD) {
 } else {
   PODMAN = "podman";
 }
+
+/** Only krkn-hub containers — avoids huge `podman ps -a` JSON and ERR_CHILD_PROCESS_STDIO_MAXBUFFER. */
+const PODMAN_PS_KRKN_HUB_JSON = `${PODMAN} ps -a --filter ancestor=quay.io/krkn-chaos/krkn-hub --format json`;
+const EXEC_LARGE_MAX_BUFFER = { maxBuffer: 1024 * 1024 * 50 };
+
+function getPodmanRunPlatformPrefix() {
+  const fromEnv = process.env.PODMAN_PLATFORM?.trim();
+  if (fromEnv) return `--platform ${fromEnv} `;
+  switch (process.arch) {
+    case "arm64":
+      return "--platform linux/arm64 ";
+    case "x64":
+      return "--platform linux/amd64 ";
+    default:
+      return "--platform linux/amd64 ";
+  }
+}
+const PODMAN_RUN_PLATFORM_PREFIX = getPodmanRunPlatformPrefix();
+
+// Validates the podman socket before starting a container instance
+if (
+  process.env.CONTAINER_BUILD &&
+  !fs.existsSync("/run/podman/podman.sock") &&
+  !process.env.CONTAINER_HOST
+) {
+  console.warn(
+    "[chaos-dashboard] podman-remote: missing /run/podman/podman.sock. Mount the Podman socket, e.g. " +
+      "-v /run/podman/podman.sock:/run/podman/podman.sock:z (use this path from podman run; it resolves on Podman Machine), " +
+      "or set CONTAINER_HOST for a TCP API. See containers/podman-run.sh."
+  );
+} else if (
+  process.env.CONTAINER_BUILD &&
+  fs.existsSync("/run/podman/podman.sock") &&
+  !process.env.CONTAINER_HOST
+) {
+  try {
+    fs.accessSync("/run/podman/podman.sock", fs.constants.R_OK | fs.constants.W_OK);
+  } catch (err) {
+    if (err?.code === "EACCES") {
+      console.warn(
+        "[chaos-dashboard] Podman socket is present but not accessible (EACCES). Add " +
+          "--security-opt label=disable and --group-add \"$(podman machine ssh 'stat -c %g /run/podman/podman.sock')\" " +
+          "for Podman Machine, or --group-add \"$(stat -c %g /run/podman/podman.sock)\" on Linux. See containers/podman-run.sh."
+      );
+    }
+  }
+}
+
 app.post("/start-kraken/", (req, res) => {
   const scenario = req.body.params.scenarioChecked;
   let kubeConfigPath = "";
@@ -59,31 +107,55 @@ app.post("/start-kraken/", (req, res) => {
       : req.body.params.kubeconfigPath;
   }
 
+  if (!kubeConfigPath || kubeConfigPath.startsWith("undefined/")) {
+    return res.status(400).json({
+      message:
+        "Invalid kubeconfig path. Set CHAOS_ASSETS in container mode or provide kubeconfigPath/upload a file.",
+      status: "failed",
+    });
+  }
+
+  if (process.env.CONTAINER_BUILD) {
+    const uploadedKubeconfigPath = `${uploadFilePath}/kubeconfig`;
+    if (!fs.existsSync(uploadedKubeconfigPath)) {
+      return res.status(400).json({
+        message:
+          "kubeconfig not found in mounted assets. Upload kubeconfig or ensure src/assets/kubeconfig exists.",
+        status: "failed",
+      });
+    }
+  } else if (!fs.existsSync(kubeConfigPath)) {
+    return res.status(400).json({
+      message: `kubeconfig not found at: ${kubeConfigPath}`,
+      status: "failed",
+    });
+  }
+
   let command = "";
   switch (scenario) {
     case "pod-scenarios":
-      command = `${PODMAN} run --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_TIMEOUT=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:pod-scenarios`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX}--env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_TIMEOUT=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:pod-scenarios`;
       break;
     case "container-scenarios":
-      command = `${PODMAN} run  --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:container-scenarios`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:container-scenarios`;
       break;
     case "node-cpu-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-cpu-hog`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-cpu-hog`;
       break;
     case "node-io-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-io-hog`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-io-hog`;
       break;
     case "node-memory-hog":
-      command = `${PODMAN} run  --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/root/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-memory-hog`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-memory-hog`;
       break;
     case "pvc-scenarios":
-      command = `${PODMAN} run --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenarios`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX}--env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --name=${req.body.params.name} --net=host --env-host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenarios`;
       break;
     case "node-scenarios":
-      command = `${PODMAN} run --name=${req.body.params.name} --net=host --env-host=true -v ${req.body.params.kubeconfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:node-scenarios`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX}--name=${req.body.params.name} --net=host --env-host=true -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:node-scenarios`;
       break;
     case "time-scenarios":
-      command = `${PODMAN} run --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host --env-host -v ${req.body.params.kubeconfigPath}:/root/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX}--env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host --env-host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
       break;
     default:
       command = `echo 'No scenario selected'`;
@@ -123,9 +195,7 @@ app.get("/getPodStatus", (req, res) => {
 });
 
 app.get("/getPodDetails", (req, res) => {
-  const command = `${PODMAN} ps -a --format json`;
-
-  child_process.exec(command, (err, stdout, stderr) => {
+  child_process.exec(PODMAN_PS_KRKN_HUB_JSON, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
     if (err) {
       console.error("Exec error:", err);
       return res.status(500).json({ message: err.message, status: "failed" });
@@ -406,7 +476,18 @@ io.on("connection", (socket) => {
   });
 
   socket.on("logs", (activePod) => {
-    const ls = child_process.spawn("podman", ["logs", "-f", activePod]);
+    const podName = Array.isArray(activePod) ? activePod[0] : activePod;
+    if (!podName || typeof podName !== "string") {
+      socket.emit("logs", { error: "Invalid pod name" });
+      return;
+    }
+
+    const ls = child_process.spawn(PODMAN, ["logs", "-f", podName]);
+
+    ls.on("error", (error) => {
+      console.error("Error spawning logs command:", error);
+      socket.emit("logs", { error: error.message });
+    });
 
     ls.stdout.on("data", (data) => {
       const lines = data.toString().split("\n");
@@ -425,9 +506,7 @@ io.on("connection", (socket) => {
     });
   });
   socket.on("podStatus", () => {
-    const command = `${PODMAN} ps -a --format json`;
-
-    child_process.exec(command, (error, stdout, stderr) => {
+    child_process.exec(PODMAN_PS_KRKN_HUB_JSON, EXEC_LARGE_MAX_BUFFER, (error, stdout, stderr) => {
       if (error) {
         console.error("Exec error:", error);
         socket.emit("podStatus", { error: "Failed to fetch pod details" });
@@ -457,3 +536,20 @@ io.on("connection", (socket) => {
     });
   });
 });
+
+function shutdown(signal) {
+  console.log(`\nReceived ${signal}, closing server…`);
+  // io.close() shuts down Socket.IO and the attached HTTP server (same as `server`).
+  io.close((err) => {
+    if (err) console.error("Server close error:", err);
+    process.exit(err ? 1 : 0);
+  });
+  setTimeout(() => {
+    console.error("Shutdown timed out; exiting.");
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+for (const sig of ["SIGINT", "SIGTERM"]) {
+  process.on(sig, () => shutdown(sig));
+}

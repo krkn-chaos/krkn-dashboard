@@ -24,3 +24,7 @@ database/*
 *.njsproj
 *.sln
 *.sw?
+
+# Kubeconfig files
+kubeconfig
+**/kubeconfig

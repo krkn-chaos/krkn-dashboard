@@ -1,36 +1,55 @@
 import * as path from "path";
+import fs from "fs";
 
 import { fileURLToPath } from "url";
 import sqlite3 from "sqlite3";
 
-sqlite3.verbose();
-
-const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
+const __filename = fileURLToPath(import.meta.url); // get the resolved path to this file
 const __dirname = path.dirname(__filename); // get the name of the directory
 
-const databaseDirectory = __dirname + "/../database/krkn.db";
+const defaultDbDir = path.join(__dirname, "..", "database");
+const rawDatabaseDir = process.env.DATABASE_PATH || defaultDbDir;
+const databaseDir = path.resolve(rawDatabaseDir);
+
+function getMostRecentDbAtPath(dir) {
+  try {
+    const files = fs.readdirSync(dir, { withFileTypes: true });
+    const dbFiles = files
+      .filter((f) => f.isFile() && f.name.endsWith(".db"))
+      .map((f) => path.join(dir, f.name))
+      .map((p) => ({ path: p, mtime: fs.statSync(p).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime);
+    return dbFiles.length ? dbFiles[0].path : path.join(dir, "krkn.db");
+  } catch (err) {
+    if (err.code === "EACCES") {
+      throw new Error(
+        `Cannot read database directory (EACCES): ${dir}`
+      );
+    }
+    if (err.code === "ENOTDIR") {
+      throw new Error(
+        `Database path is not a directory: ${dir}`
+      );
+    }
+    throw err;
+  }
+}
+
+const databasePath = getMostRecentDbAtPath(databaseDir);
+
 export const db = new sqlite3.Database(
-  databaseDirectory,
-  sqlite3.OPEN_READWRITE,
+  databasePath,
+  sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
   (err) => {
     if (err) return console.error(err);
   }
 );
 
-db.exec(`CREATE TABLE IF NOT EXISTS test (
-    id INTEGER PRIMARY KEY,
-    movie varchar(50),
-    quote varchar(50),
-    char varchar(50)
-  );`);
-
-// db.exec(`DROP TABLE config`);
 db.exec(`CREATE TABLE IF NOT EXISTS config (
     id INTEGER PRIMARY KEY,
     name varchar(50),
     params json
   );`);
-// db.exec(`DROP TABLE details`);
 db.exec(`CREATE TABLE IF NOT EXISTS details (
     container_id varchar(250) PRIMARY KEY,
     image varchar(150),
