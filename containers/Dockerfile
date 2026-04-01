@@ -3,8 +3,10 @@ FROM fedora:latest
 
 # Update and install necessary packages
 RUN dnf update -y && \
-    dnf install -y curl git podman-remote nodejs && \
+    dnf install -y curl git podman-remote nodejs python3 python3-setuptools make gcc-c++ && \
     dnf clean all
+
+ENV PYTHON=/usr/bin/python3
 
 # Display installed versions
 RUN node -v && \

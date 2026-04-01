@@ -2,39 +2,44 @@
 
 krkn Dashboard is the visualization component of [krkn-hub](https://github.com/redhat-chaos/krkn-hub/tree/main). It offers a set of user-friendly web interfaces through which users can manipulate and observe Chaos experiments.
 
-# Dashboard directory structure
+## Prerequisites
 
-## public
+Before building or running, check available releases at: https://github.com/krkn-chaos/krkn-dashboard/releases
+
+## Run
+
+For installation and run instructions (standalone and container), see the [Krkn documentation](https://krkn-chaos.dev/docs/installation/krkn-dashboard/).
+
+## Dashboard directory structure
+
+### public
 
 Contains the root application `index.html` and React template artifacts.
 
-## server
+### server
 
 The source for an NPM express server that's used in developer mode.
 
-## src
+### src
 
 The krkn dashboard Javascript source plus additional CSS/LESS and artifacts.
 
-### assets
+#### assets
 
 Assets placed in the `src/assets/images` directory are only referenced within component or layout definitions and are packaged in the generated `***.js` file during the build process.
 
-### reducers
+#### reducers
 
-Contains functions that manage store via actions 
+Contains functions that manage store via actions.
 
-### utils
+#### utils
 
-Helper functions for the dashboard
+Helper functions for the dashboard.
 
-## Run
-- [Standlone](docs/installation.md)
-- [Containerized version](containers/build_own_image-README.md)
 
 ## Storage
- 
-krkn dashboard stores data using local browser storage and cookies.
+
+krkn dashboard stores data using local browser storage and cookies. When run in a container, the SQLite database is stored in the mounted `database` directory (or `/data` inside the container).
 
 ## Template
 
