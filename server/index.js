@@ -9,6 +9,7 @@ import {
   savePodDetails,
 } from "./db.js";
 
+import { fetchGrafanaDashboardList } from "./grafanaDashboardIndex.js";
 import { ElasticsearchService } from "./elasticsearchService.js";
 import { Server } from "socket.io";
 import child_process from "child_process";
@@ -406,6 +407,24 @@ app.post(
   uploadFiles,
   handleFileUploadError
 );
+
+app.get("/grafana-dashboard-index", async (req, res) => {
+  const baseUrl = req.query.baseUrl;
+  if (!baseUrl || typeof baseUrl !== "string") {
+    return res.status(400).json({ message: "baseUrl query parameter is required" });
+  }
+  try {
+    const result = await fetchGrafanaDashboardList(baseUrl);
+    res.json({ status: 200, ...result });
+  } catch (err) {
+    console.error("Grafana dashboard index error:", err);
+    res.status(500).json({
+      message: err.message || "Failed to fetch Grafana dashboards",
+      dashboards: [],
+      source: "error",
+    });
+  }
+});
 
 app.post("/connect-es", async (req, res) => {
   const {

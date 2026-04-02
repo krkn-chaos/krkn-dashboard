@@ -19,8 +19,26 @@ export const esConnect = (data) => async (dispatch, getState) => {
       size,
       offset,
       appliedFilters,
-      connectionInfo,
+      connectionInfo: prevConnection,
     } = state;
+    const grafanaBase = (data.grafanaBaseUrl ?? prevConnection.grafanaBaseUrl ?? "").trim();
+    let grafanaDashboardIndex = data.grafanaDashboardIndex ?? prevConnection.grafanaDashboardIndex ?? [];
+    const prevBase = (prevConnection.grafanaBaseUrl || "").trim();
+    const baseChanged = grafanaBase !== prevBase;
+    const shouldRefreshGrafana =
+      grafanaBase &&
+      (baseChanged || !Array.isArray(grafanaDashboardIndex) || grafanaDashboardIndex.length === 0);
+    if (shouldRefreshGrafana) {
+      try {
+        const idx = await API.get("/grafana-dashboard-index", {
+          params: { baseUrl: grafanaBase },
+        });
+        grafanaDashboardIndex = idx.data?.dashboards || [];
+      } catch {
+        grafanaDashboardIndex = [];
+      }
+    }
+
     const response = await API.post("/connect-es", {
       params: {
         ...data,
@@ -32,7 +50,7 @@ export const esConnect = (data) => async (dispatch, getState) => {
       },
     });
     if (response.data.status === 200) {
-      if (!connectionInfo.isConnected) {
+      if (!prevConnection.isConnected) {
         dispatch(showToast("success", "Connected to the instance"));
       }
       dispatch({
@@ -51,6 +69,8 @@ export const esConnect = (data) => async (dispatch, getState) => {
           isConnected: true,
           username: data.username,
           password: data.password,
+          grafanaBaseUrl: grafanaBase,
+          grafanaDashboardIndex,
         },
       });
       dispatch({
@@ -69,6 +89,8 @@ export const esConnect = (data) => async (dispatch, getState) => {
         host: "",
         index: "",
         isConnected: false,
+        grafanaBaseUrl: "",
+        grafanaDashboardIndex: [],
       },
     });
 
@@ -91,6 +113,8 @@ export const disconnectES = () => (dispatch) => {
       host: "",
       index: "",
       isConnected: false,
+      grafanaBaseUrl: "",
+      grafanaDashboardIndex: [],
     },
   });
   dispatch({

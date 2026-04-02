@@ -29,6 +29,8 @@ const initialState = {
     host: "",
     index: "",
     isConnected: false,
+    grafanaBaseUrl: "",
+    grafanaDashboardIndex: [],
   },
   tableFilters: [
     { name: "Status", value: "job_status" },

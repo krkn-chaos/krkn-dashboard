@@ -6,7 +6,7 @@ import PropTypes from "prop-types";
 import React from "react";
 
 const GraphRow = (props) => {
-  const { affected_pods, kubernetes_objects_count } = props.doc;
+  const { affected_pods = [], kubernetes_objects_count = {} } = props.doc || {};
   const recoveredPods = affected_pods.filter(
     (pod) => pod.status === "recovered"
   );

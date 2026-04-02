@@ -39,17 +39,28 @@ const formFields = [
     describedby: "Password",
     isPassword: true,
   },
+  {
+    id: 4,
+    label: "Grafana Base URL",
+    key: "grafanaBaseUrl",
+    describedby: "Grafana root URL (dashboards are discovered automatically)",
+    isPassword: false,
+    isOptional: true,
+  },
 ];
+const getInitialEsForm = () => ({
+  host: "",
+  index: "",
+  port: 9200,
+  username: "",
+  password: "",
+  use_ssl: false,
+  grafanaBaseUrl: "",
+});
+
 const ESConnectForm = () => {
   const dispatch = useDispatch();
-  const [esForm, setEsForm] = useState({
-    host: "",
-    index: "",
-    port: 9200,
-    username: "",
-    password: "",
-    use_ssl: false,
-  });
+  const [esForm, setEsForm] = useState(getInitialEsForm);
   const [isBtnDisabled, setIsBtnDisabled] = useState(true);
 
   useEffect(() => {
@@ -71,9 +82,9 @@ const ESConnectForm = () => {
       {formFields.map((field) => (
         <FormGroup key={field.id} label={field.label}>
           <TextInput
-            isRequired
+            isRequired={!field.isOptional}
             type={field.isPassword ? "password" : "text"}
-            id={`${field.key}-${field.index}`}
+            id={field.key}
             name={field.key}
             aria-describedby="simple-form-name-02-helper"
             value={esForm[field.key]}

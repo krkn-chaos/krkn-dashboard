@@ -14,18 +14,19 @@ import React, { useCallback, useState } from "react";
 
 import ConfigRow from "@/components/molecules/ConfigRow";
 import GraphRow from "@/components/molecules/GraphRow";
+import GrafanaLink from "@/components/atoms/GrafanaLink";
 import RenderPagination from "../RenderPagination";
 import StatusCell from "@/components/atoms/StatusCell";
 import StorageTableFilter from "@/components/molecules/StorageTableFilter";
 import { formatDateTime } from "@/utils/helper";
 import { useSelector } from "react-redux";
+import { resolveDashboardPath } from "@/assets/constants/grafanaConstants";
 
 const StorageTable = () => {
   const results = useSelector((state) => state.storage.results);
-  const { start_date, end_date, size, pagination } = useSelector(
+  const { start_date, end_date, size, pagination, connectionInfo } = useSelector(
     (state) => state.storage
   );
-  //Row expansion
   const [expandedRunNames, setExpandedRunNames] = useState([]);
   const setRunExpanded = (run, isExpanding = true) => {
     setExpandedRunNames((prevExpanded) => {
@@ -100,6 +101,35 @@ const StorageTable = () => {
                             <GraphRow doc={doc} />
                           </GridItem>
                         </Grid>
+                        {connectionInfo?.grafanaBaseUrl ? (() => {
+                          const dashboardPath = resolveDashboardPath(
+                            doc.scenario_type,
+                            connectionInfo.grafanaDashboardIndex
+                          );
+                          return (
+                            <Grid hasGutter className="pf-v5-u-mt-md">
+                              <GridItem span={12}>
+                                <div className="pf-v5-u-display-flex pf-v5-u-justify-content-flex-end pf-v5-u-align-items-center pf-v5-u-gap-md pf-v5-u-flex-wrap">
+                                  {dashboardPath ? (
+                                    <>
+                                      <span>View metrics on Grafana:</span>
+                                      <GrafanaLink
+                                        config={doc.config || {}}
+                                        uuid={doc.uuid}
+                                        grafanaBaseUrl={connectionInfo.grafanaBaseUrl}
+                                        dashboardPath={dashboardPath}
+                                      />
+                                    </>
+                                  ) : (
+                                    <span className="pf-v5-u-font-size-sm">
+                                      No grafana dashboard matched scenario type
+                                    </span>
+                                  )}
+                                </div>
+                              </GridItem>
+                            </Grid>
+                          );
+                        })() : null}
                       </ExpandableRowContent>
                     </Td>
                   </Tr>
