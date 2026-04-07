@@ -144,6 +144,7 @@ export class ElasticsearchService {
       total_node_count,
       cluster_version,
       kubernetes_objects_count,
+      run_uuid,
     } = source;
 
     const scenario = scenarios[0] || {};
@@ -151,6 +152,7 @@ export class ElasticsearchService {
 
     const parsedData = {
       id,
+      uuid: run_uuid,
       timestamp: timestamp || atTimestamp || new Date().toISOString(),
       start_time: start_timestamp || new Date().toISOString(),
       end_time: end_timestamp || new Date().toISOString(),
@@ -158,7 +160,7 @@ export class ElasticsearchService {
       status: scenario.exit_status || job_status || "unknown",
       namespace: namespace || target_namespace || "default",
       node_summary_infos: node_summary_infos || [],
-      kubernetes_objects_count,
+      kubernetes_objects_count: kubernetes_objects_count || {},
 
       config: {
         id: parameters.id || "unknown",
