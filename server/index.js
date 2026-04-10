@@ -101,17 +101,30 @@ app.post("/start-kraken/", (req, res) => {
   let kubeConfigPath = "";
 
   if (process.env.CONTAINER_BUILD) {
-    kubeConfigPath = `${process.env.CHAOS_ASSETS}/kubeconfig`;
+    const bindSrc = (process.env.KRKN_DASHBOARD_KUBECONFIG_BIND_SRC || "").trim();
+    const assetsRoot = (process.env.CHAOS_ASSETS || "").trim().replace(/\/+$/, "");
+    kubeConfigPath =
+      bindSrc || (assetsRoot ? `${assetsRoot}/kubeconfig` : "");
+    if (!kubeConfigPath || kubeConfigPath.startsWith("undefined/")) {
+      return res.status(400).json({
+        message:
+          "Invalid kubeconfig bind path in container mode. Set CHAOS_ASSETS to the chaos assets directory on the Podman host (kubeconfig at CHAOS_ASSETS/kubeconfig), or optionally set KRKN_DASHBOARD_KUBECONFIG_BIND_SRC to the kubeconfig file path on the host. See containers/podman-run.sh.",
+        status: "failed",
+      });
+    }
   } else {
     kubeConfigPath = req.body.params.isFileUpload
       ? `${uploadFilePath}/kubeconfig`
       : req.body.params.kubeconfigPath;
   }
 
-  if (!kubeConfigPath || kubeConfigPath.startsWith("undefined/")) {
+  if (
+    !process.env.CONTAINER_BUILD &&
+    (!kubeConfigPath || kubeConfigPath.startsWith("undefined/"))
+  ) {
     return res.status(400).json({
       message:
-        "Invalid kubeconfig path. Set CHAOS_ASSETS in container mode or provide kubeconfigPath/upload a file.",
+        "Invalid kubeconfig path. Provide kubeconfigPath or upload a file.",
       status: "failed",
     });
   }
