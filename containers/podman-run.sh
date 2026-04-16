@@ -61,6 +61,7 @@ else
 fi
 
 podman rm -f "$CONTAINER_NAME" 2>/dev/null || true
+podman rmi -f "$IMAGE_NAME" 2>/dev/null || true
 podman build "${BUILD_PLATFORM_ARGS[@]}" -t "$IMAGE_NAME" -f "$ROOT_DIR/containers/Dockerfile" "$ROOT_DIR"
 
 podman run -d \
