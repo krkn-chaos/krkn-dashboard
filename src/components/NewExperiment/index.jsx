@@ -18,12 +18,10 @@ import KubeconfigFileUpload from "@/components/molecules/FileUpload";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import { paramsList } from "./experimentFormData";
 import { startKraken } from "@/actions/newExperiment";
-import API from "@/utils/axiosInstance";
 
 const NewExperiment = () => {
   const dispatch = useDispatch();
   const [isBtnDisabled, setIsBtnDisabled] = useState(true);
-  const [kubeconfigPathLocked, setKubeconfigPathLocked] = useState(false);
   const scenarioChecked = useSelector(
     (state) => state.experiment.scenarioChecked
   );
@@ -114,25 +112,6 @@ const NewExperiment = () => {
   });
 
   useEffect(() => {
-    let cancelled = false;
-    API.get("/getKubeconfigContext")
-      .then((response) => {
-        if (cancelled) {
-          return;
-        }
-        const { externallyBound } = response.data || {};
-        if (externallyBound) {
-          setKubeconfigPathLocked(true);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
     const scenarioData = data[scenarioChecked];
     const scenarioParams = paramsList[scenarioChecked];
 
@@ -188,9 +167,7 @@ const NewExperiment = () => {
               <Grid hasGutter>
                 <GridItem span={6}>
                   <FormGroup isRequired={false} label={"KUBECONFIG FILE"}>
-                    <KubeconfigFileUpload
-                      isDisabled={kubeconfigPathLocked}
-                    />
+                    <KubeconfigFileUpload />
                   </FormGroup>
                 </GridItem>
               </Grid>

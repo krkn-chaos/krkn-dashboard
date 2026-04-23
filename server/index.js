@@ -38,11 +38,26 @@ function getChaosAssetsRoot() {
   return (process.env.CHAOS_ASSETS || "").trim().replace(/\/+$/, "");
 }
 
-function getKubeConfigFileLocation() {
-  if ((process.env.EXTERNAL_CONTAINER_BUILD || "").trim() === "true") {
-    return path.join(getChaosAssetsRoot(), "kubeconfig");
-  }
+function getUploadKubeconfigPath() {
   return path.join(uploadFilePath, "kubeconfig");
+}
+
+function getOrchestratorKubeconfigPath() {
+  return path.join(getChaosAssetsRoot(), "kubeconfig");
+}
+
+/**
+ * Local: always the uploaded/mounted file under `src/assets/kubeconfig`.
+ * External container: uploaded file (overwrites mount) when `isFileUpload`; otherwise `CHAOS_ASSETS/kubeconfig`.
+ */
+function resolveKubeconfigPathForRequest(isFileUpload) {
+  if ((process.env.EXTERNAL_CONTAINER_BUILD || "").trim() === "true") {
+    if (isFileUpload) {
+      return getUploadKubeconfigPath();
+    }
+    return getOrchestratorKubeconfigPath();
+  }
+  return getUploadKubeconfigPath();
 }
 
 let myInterval;
@@ -110,8 +125,9 @@ if (
 
 app.post("/start-kraken/", (req, res) => {
   const scenario = req.body.params.scenarioChecked;
+  const isFileUpload = Boolean(req.body.params?.isFileUpload);
 
-  const kubeConfigFileLocation = getKubeConfigFileLocation();
+  const kubeConfigFileLocation = resolveKubeconfigPathForRequest(isFileUpload);
   if (!fs.existsSync(kubeConfigFileLocation)) {
     return res.status(400).json({
       message: `kubeconfig not found at: ${kubeConfigFileLocation}. If the file exists elsewhere in the image, CHAOS_ASSETS is wrong for this image.`,
@@ -247,15 +263,13 @@ app.get("/removePod", (req, res) => {
 });
 
 app.get("/getKubeconfigContext", (req, res) => {
-  const externallyBound = process.env.EXTERNAL_CONTAINER_BUILD?.trim() === 'true';
-  let pathDisplay = "";
-  if (externallyBound) {
-    pathDisplay = (process.env.KUBECONFIG_PATH || "").trim() || getKubeConfigFileLocation();
-  }
-
+  const external = (process.env.EXTERNAL_CONTAINER_BUILD || "").trim() === "true";
   res.json({
-    externallyBound,
-    pathDisplay,
+    // Upload is always available (including external container: optional override of orchestrator kubeconfig).
+    externallyBound: false,
+    pathDisplay: external
+      ? (process.env.KUBECONFIG_PATH || "").trim() || getOrchestratorKubeconfigPath()
+      : "",
   });
 });
 
