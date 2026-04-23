@@ -10,4 +10,17 @@
   width: 70%;
   margin-left: auto;
   margin-right: auto;
+
+  // Override Overview `display: flex` for `.file-path-container` (no longer has "or")
+  .file-path-container {
+    display: block;
+    width: 100%;
+    .pf-v5-c-file-upload {
+      width: 100%;
+    }
+  }
+}
+
+.file-path-container--disabled {
+  opacity: 0.65;
 }

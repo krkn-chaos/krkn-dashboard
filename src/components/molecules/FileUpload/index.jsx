@@ -4,23 +4,31 @@ import { FileUpload } from "@patternfly/react-core";
 import React from "react";
 import { useDispatch } from "react-redux";
 
-const KubeconfigFileUpload = () => {
+const KubeconfigFileUpload = ({ isDisabled = false }) => {
   const dispatch = useDispatch();
   const [filename, setFilename] = React.useState("");
   const [value, setValue] = React.useState(null);
 
   const handleFileInputChange = (_, file) => {
+    if (isDisabled) {
+      return;
+    }
     setFilename(file.name);
     dispatch(fileUpload(file));
     dispatch(updateFileContent(true));
   };
   const handleClear = () => {
+    if (isDisabled) {
+      return;
+    }
     setFilename("");
     setValue("");
     dispatch(updateFileContent(""));
   };
   return (
-    <div className="file-path-container">
+    <div
+      className={`file-path-container${isDisabled ? " file-path-container--disabled" : ""}`}
+    >
       <FileUpload
         id="simple-file"
         value={value}
@@ -29,8 +37,8 @@ const KubeconfigFileUpload = () => {
         onFileInputChange={handleFileInputChange}
         onClearClick={handleClear}
         browseButtonText="Upload"
+        isDisabled={isDisabled}
       />
-      <span className="or-clause">or</span>
     </div>
   );
 };

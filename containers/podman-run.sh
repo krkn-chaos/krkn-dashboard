@@ -69,6 +69,8 @@ podman run -d \
   "${ENV_PLATFORM_ARGS[@]}" \
   ${GROUP_ARGS[@]+"${GROUP_ARGS[@]}"} \
   -e "CHAOS_ASSETS=$CHAOS_ASSETS" \
+  -e "KUBECONFIG_PATH=$CHAOS_ASSETS/kubeconfig" \
+  -e "EXTERNAL_CONTAINER_BUILD=false" \
   --security-opt label=disable \
   -v "$CHAOS_ASSETS:/usr/src/chaos-dashboard/src/assets:z" \
   -v "$ROOT_DIR/database:/usr/src/chaos-dashboard/database:z" \

@@ -1,14 +1,6 @@
 export const paramsList = {
   "pod-scenarios": [
     {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
-    {
       key: "name",
       label: "Name",
       fieldId: "name-id",
@@ -76,14 +68,6 @@ export const paramsList = {
   ],
   "container-scenarios": [
     {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
-    {
       key: "name",
       label: "Name",
       fieldId: "name-id",
@@ -142,14 +126,6 @@ export const paramsList = {
     },
   ],
   "namespace-scenarios": [
-    {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
     {
       key: "name",
       label: "Name",
@@ -210,14 +186,6 @@ export const paramsList = {
   ],
   "node-scenarios": [
     {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
-    {
       key: "name",
       label: "Name",
       fieldId: "name-id",
@@ -244,14 +212,6 @@ export const paramsList = {
     },
   ],
   "pvc-scenarios": [
-    {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
     {
       key: "name",
       label: "Name",
@@ -302,14 +262,6 @@ export const paramsList = {
     },
   ],
   "time-scenarios": [
-    {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
     {
       key: "name",
       label: "Name",
@@ -369,14 +321,6 @@ export const paramsList = {
   ],
   "power-outages": [
     {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
-    {
       key: "name",
       label: "Name",
       fieldId: "name-id",
@@ -410,14 +354,6 @@ export const paramsList = {
     },
   ],
   "node-cpu-hog": [
-    {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
     {
       key: "name",
       label: "Name",
@@ -469,14 +405,6 @@ export const paramsList = {
     },
   ],
   "node-io-hog": [
-    {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
     {
       key: "name",
       label: "Name",
@@ -536,14 +464,6 @@ export const paramsList = {
     },
   ],
   "node-memory-hog": [
-    {
-      key: "kubeconfigPath",
-      label: "KUBECONFIG PATH",
-      fieldId: "configPath-id",
-      ariaDescribedby: "kubeconfig-path",
-      helperText: "",
-      isRequired: false,
-    },
     {
       key: "name",
       label: "Name",

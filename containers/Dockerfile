@@ -15,7 +15,7 @@ RUN node -v && \
 
 WORKDIR /usr/src/chaos-dashboard
 
-ENV CONTAINER_BUILD=true
+ENV EXTERNAL_CONTAINER_BUILD=true
 # Install app dependencies
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 # where available (npm@5+)

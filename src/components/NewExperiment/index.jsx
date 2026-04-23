@@ -163,10 +163,14 @@ const NewExperiment = () => {
           </div>*/}
 
           <Grid hasGutter>
-            <GridItem span={6}>
-              <FormGroup isRequired={false} label={"KUBECONFIG FILE"}>
-                <KubeconfigFileUpload />
-              </FormGroup>
+            <GridItem span={12}>
+              <Grid hasGutter>
+                <GridItem span={6}>
+                  <FormGroup isRequired={false} label={"KUBECONFIG FILE"}>
+                    <KubeconfigFileUpload />
+                  </FormGroup>
+                </GridItem>
+              </Grid>
             </GridItem>
             {scenarioChecked &&
               paramsList[scenarioChecked].map((item) => {
