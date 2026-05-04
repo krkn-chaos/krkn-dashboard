@@ -132,13 +132,14 @@ export const getPodDetails = () => async (dispatch, getState) => {
     socketInstance.off("podStatus");
 
     socketInstance.on("podStatus", (data) => {
-      if (data?.length > 0) {
+      if (data?.error) {
+        return;
+      }
+      if (Array.isArray(data)) {
         dispatch({
           type: TYPES.SET_POD_DETAILS,
           payload: data,
         });
-      } else {
-        console.warn("Received empty podStatus data");
       }
     });
   } catch (error) {
@@ -262,14 +263,18 @@ export const getDetails = () => async (dispatch) => {
 export const downloadLogs = (containerName) => async (dispatch) => {
   try {
     dispatch({ type: TYPES.LOADING });
-    const response = await API.post("/downloadLogs", {
-      params: {
-        container: containerName,
+    const response = await API.post(
+      "/downloadLogs",
+      {
+        params: {
+          container: containerName,
+        },
       },
-    });
+      { responseType: "blob" }
+    );
     if (response.status === 200) {
-      const blob = await response.data;
-      const url = window.URL.createObjectURL(new Blob([blob]));
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `${containerName}.log`); // Change this if your file has a different name
@@ -277,7 +282,7 @@ export const downloadLogs = (containerName) => async (dispatch) => {
       link.click();
       link.parentNode.removeChild(link);
     }
-  } catch {
+  } catch (err) {
     dispatch(
       showToast("danger", "Error in downloading logs", "Try again later")
     );

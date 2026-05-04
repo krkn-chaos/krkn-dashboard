@@ -1,0 +1,88 @@
+.history-workspace {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  &__grid {
+    align-items: flex-start;
+  }
+
+  &__sidebar {
+    min-width: 0;
+  }
+
+  &__list-card {
+    height: min(70vh, 720px);
+    display: flex;
+    flex-direction: column;
+
+    .pf-v5-c-card__title {
+      padding-bottom: 0.5rem;
+    }
+  }
+
+  &__list-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding-top: 0.5rem;
+  }
+
+  &__row-click {
+    cursor: pointer;
+  }
+
+  &__meta {
+    font-size: var(--pf-v5-global--FontSize--sm);
+    color: var(--pf-v5-global--Color--200);
+    margin-top: 0.25rem;
+  }
+
+  &__stamp {
+    font-size: var(--pf-v5-global--FontSize--xs);
+    color: var(--pf-v5-global--Color--200);
+    margin-top: 0.25rem;
+  }
+
+  &__detail-card {
+    margin-bottom: 1rem;
+  }
+
+  &__detail-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__logs-card {
+    .pf-v5-c-card__body {
+      padding-top: 0;
+    }
+  }
+
+  &__logs {
+    background: var(--pf-v5-global--BackgroundColor--dark-300);
+    color: var(--pf-v5-global--Color--light-100);
+    font-family: var(--pf-v5-global--FontFamily--monospace);
+    font-size: var(--pf-v5-global--FontSize--sm);
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    padding: 1rem;
+    max-height: min(55vh, 480px);
+    overflow: auto;
+  }
+
+  &__log-line {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}

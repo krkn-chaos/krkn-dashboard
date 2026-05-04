@@ -51,7 +51,11 @@ const StorageTable = () => {
 
   return (
     <>
-      <StorageTableFilter start_date={start_date} end_date={end_date} />
+      <StorageTableFilter
+        start_date={start_date}
+        end_date={end_date}
+        type="metrics"
+      />
       <Table isStriped aria-label="Storage Data Table">
         <Thead>
           <Tr>

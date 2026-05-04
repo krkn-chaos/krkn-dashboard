@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"nodemon --watch server server/index.js\" \"vite\"",
+    "dev:mcp": "sh -c 'cd mcp_summary && if [ -n \"${MCP_PYTHON:-}\" ]; then exec \"$MCP_PYTHON\" -m uvicorn mcp_server:app --host 127.0.0.1 --port 5000; elif [ -x .venv/bin/python ]; then exec .venv/bin/python -m uvicorn mcp_server:app --host 127.0.0.1 --port 5000; else exec python3 -m uvicorn mcp_server:app --host 127.0.0.1 --port 5000; fi'",
+    "dev:all": "concurrently -k -n mcp,web -c yellow,cyan \"npm run dev:mcp\" \"npm run dev\"",
     "build": "vite build",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
@@ -12,6 +14,7 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.0.1",
+    "@nivo/heatmap": "^0.99.0",
     "@opensearch-project/opensearch": "^3.5.1",
     "@patternfly/patternfly": "^5.3.1",
     "@patternfly/react-core": "^5.3.4",
@@ -38,6 +41,7 @@
     "react-redux": "^8.0.5",
     "react-router-dom": "^6.11.0",
     "react-syntax-highlighter": "^16.1.0",
+    "recharts": "^3.2.1",
     "redux": "^4.2.1",
     "redux-logger": "^3.0.6",
     "redux-thunk": "^2.4.2",

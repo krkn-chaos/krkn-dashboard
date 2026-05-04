@@ -1,4 +1,5 @@
 node_modules
+mcp_summary/.venv
 npm-debug.log
 database/
 .git

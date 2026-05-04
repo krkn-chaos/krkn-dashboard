@@ -45,3 +45,11 @@ export const appendQueryString = (queryObj, navigate, toPage) => {
     search: `?${queryString}`,
   });
 };
+
+/** Start date as five calendar days before today (UTC), YYYY-MM-DD. */
+export const getStartDate = () => {
+  const today = new Date();
+  const fiveDaysAgo = new Date(today);
+  fiveDaysAgo.setDate(today.getDate() - 5);
+  return formatDate(fiveDaysAgo);
+};

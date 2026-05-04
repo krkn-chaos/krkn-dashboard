@@ -9,6 +9,7 @@ import PropTypes from "prop-types";
 import React from "react";
 import { setCatFilters } from "@/actions/storageActions.js";
 import { setSelected } from "@/actions/logsActions.js";
+import { setGroupBy } from "@/actions/summaryActions.js";
 import { useDispatch } from "react-redux";
 
 const SelectBox = (props) => {
@@ -22,6 +23,9 @@ const SelectBox = (props) => {
     if (props.type === "test") {
       dispatch(setCatFilters(value));
       setIsOpen(false);
+    } else if (props.type === "summary") {
+      dispatch(setGroupBy(value));
+      setIsOpen(false);
     } else {
       dispatch(setSelected(value));
       setIsOpen(false);
@@ -33,7 +37,7 @@ const SelectBox = (props) => {
       onClick={onToggleClick}
       isExpanded={isOpen}
       style={{
-        width: "400px",
+        width: props.width || "400px",
       }}
     >
       {props.selected}
@@ -50,7 +54,7 @@ const SelectBox = (props) => {
         toggle={toggle}
         shouldFocusToggleOnSelect={false}
       >
-        {props.type === "test" ? (
+        {props.type === "test" || props.type === "summary" ? (
           <SelectList>
             {props?.options?.map((option) => (
               <SelectOption key={option?.key} value={option.name}>
@@ -80,4 +84,5 @@ SelectBox.propTypes = {
   selected: PropTypes.string,
   type: PropTypes.string,
   onChange: PropTypes.func,
+  width: PropTypes.string,
 };

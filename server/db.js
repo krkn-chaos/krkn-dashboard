@@ -60,6 +60,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS details (
     content TEXT
   );`);
 
+// Add stored_at for ordering (existing DBs)
+db.run("ALTER TABLE details ADD COLUMN stored_at TEXT", (e) => {
+  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+    console.warn("[db] ALTER TABLE details ADD COLUMN stored_at:", e?.message);
+  }
+});
+
 // Database functions
 export const saveConfig = (name, params) => {
   return new Promise((resolve, reject) => {
@@ -105,7 +112,7 @@ export const getConfig = () => {
 
 export const getResults = () => {
   return new Promise((resolve, reject) => {
-    const sql = `SELECT * FROM details`;
+    const sql = `SELECT * FROM details ORDER BY COALESCE(stored_at, '') DESC, rowid DESC`;
     db.all(sql, [], (err, rows) => {
       if (err) {
         reject({
@@ -142,15 +149,21 @@ export const deleteConfig = (id) => {
 
 export const savePodDetails = (containerId, image, mounts, state, status, name, content) => {
   return new Promise((resolve, reject) => {
-    const sql = `INSERT INTO details(container_id, image, mounts, state, status, name, content) VALUES (?,?,?,?,?,?,?)`;
-    db.run(sql, [containerId, image, mounts, state, status, name, content], function(err) {
-      if (err) {
-        console.log(err);
-        reject(err);
-      } else {
-        console.log("successful insertion");
-        resolve({ success: true });
+    const sql = `INSERT OR REPLACE INTO details(
+      container_id, image, mounts, state, status, name, content, stored_at
+    ) VALUES (?,?,?,?,?,?,?, datetime('now'))`;
+    db.run(
+      sql,
+      [containerId, image, mounts, state, status, name, content],
+      function(err) {
+        if (err) {
+          console.log(err);
+          reject(err);
+        } else {
+          console.log("Run stored in database:", name);
+          resolve({ success: true });
+        }
       }
-    });
+    );
   });
 };

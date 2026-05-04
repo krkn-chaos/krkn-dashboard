@@ -1,20 +1,12 @@
 import "./index.less";
 
-import {
-  Card,
-  CardBody,
-  Tab,
-  TabTitleText,
-  Tabs,
-  Title,
-} from "@patternfly/react-core";
-import React, { useEffect, useState } from "react";
+import { Card, CardBody, Title } from "@patternfly/react-core";
+import React, { useEffect, useMemo } from "react";
 import { getPodDetails, setSocketInstance } from "@/actions/newExperiment";
 import { useDispatch, useSelector } from "react-redux";
 
-import DetailsTable from "../template/DetailsTable/DetailsTable";
-import LogsUI from "./LogsUI";
 import NewExperiment from "@/components/NewExperiment";
+import RunningContainersTable from "@/components/Overview/RunningContainersTable";
 import ScenariosCard from "@/components/template/ScenariosCard";
 import socketIOClient from "socket.io-client";
 import { useInterval } from "@/utils/hooks";
@@ -26,16 +18,18 @@ const wsPort = 8000;
 const Overview = () => {
   const dispatch = useDispatch();
 
-  const [activeTabKey, setActiveTabKey] = useState(0);
-  const [pollingInterval, setPollingInterval] = useState(6000);
-
   const { isPodmanInstalled, podDetailsList } = useSelector(
     (state) => state.experiment
   );
 
-  const handleTabClick = (_event, tabIndex) => {
-    setActiveTabKey(tabIndex);
-  };
+  const runningPods = useMemo(
+    () =>
+      podDetailsList.filter(
+        (p) => (p.State || "").toLowerCase() === "running"
+      ),
+    [podDetailsList]
+  );
+
   useEffect(() => {
     const socketInstance = socketIOClient.io(
       `${wsProtocol}://${wsHost}:${wsPort}`,
@@ -61,44 +55,25 @@ const Overview = () => {
     };
   }, [dispatch, isPodmanInstalled]);
 
-  useEffect(() => {
-    const runningPods = podDetailsList.filter(
-      (item) => item.State !== "exited"
-    );
-
-    setPollingInterval(runningPods.length > 0 ? 6000 : null);
-  }, [podDetailsList]);
-
   useInterval(() => {
     if (isPodmanInstalled) {
       dispatch(getPodDetails());
     }
-  }, pollingInterval);
+  }, isPodmanInstalled ? 6000 : null);
 
   return (
     <div className="overview-wrapper">
       <Card className="overview-card">
-        <Tabs activeKey={activeTabKey} isBox={false} onSelect={handleTabClick}>
-          <Tab eventKey={0} title={<TabTitleText>Kraken</TabTitleText>}>
-            <div className="top-bar">
-              <ScenariosCard />
-              <NewExperiment />
-
-              <Card isRounded className="status-container margin-top">
-                <CardBody>
-                  <Title headingLevel="h3" className="title-text">
-                    Pod Details
-                  </Title>
-
-                  <DetailsTable />
-                </CardBody>
-              </Card>
-            </div>
-          </Tab>
-          <Tab eventKey={1} title={<TabTitleText>Logs</TabTitleText>}>
-            <LogsUI />
-          </Tab>
-        </Tabs>
+        <CardBody>
+          <Title headingLevel="h2" className="title-text pf-v5-u-mb-md">
+            Run Kraken
+          </Title>
+          <div className="top-bar">
+            <ScenariosCard />
+            <NewExperiment />
+          </div>
+          <RunningContainersTable pods={runningPods} />
+        </CardBody>
       </Card>
     </div>
   );

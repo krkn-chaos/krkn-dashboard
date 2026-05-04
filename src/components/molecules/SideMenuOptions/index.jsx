@@ -10,13 +10,13 @@ const sideMenuOptions = [
   {
     id: 0,
     key: "overview",
-    displayName: "Overview",
+    displayName: "Run Kraken",
     icon: <CatalogIcon />,
   },
   {
     id: 1,
-    key: "experiments",
-    displayName: "Experiments",
+    key: "history",
+    displayName: "History",
     icon: <CatalogIcon />,
   },
   // {
@@ -35,6 +35,12 @@ const sideMenuOptions = [
     id: 4,
     key: "metrics",
     displayName: "Metrics",
+    icon: <CatalogIcon />,
+  },
+  {
+    id: 5,
+    key: "summary",
+    displayName: "Summary",
     icon: <CatalogIcon />,
   },
 ];
