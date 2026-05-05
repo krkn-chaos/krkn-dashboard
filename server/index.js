@@ -10,6 +10,12 @@ import {
   savePodDetails,
 } from "./db.js";
 import {
+  ElasticRunListService,
+  fetchAlertsFromOpenSearch,
+  fetchComparisonFromOpenSearch,
+  fetchSummaryFromOpenSearch,
+} from "./opensearch/index.js";
+import {
   computeStats,
   filterByNameRegex,
   filterRowsByOutcome,
@@ -17,7 +23,6 @@ import {
 } from "./pastRuns.js";
 
 import { fetchGrafanaDashboardList } from "./grafanaDashboardIndex.js";
-import { ElasticsearchService } from "./elasticsearchService.js";
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
@@ -28,12 +33,6 @@ import fs from "fs";
 import multer from "multer";
 import process from "process";
 import stripAnsi from "strip-ansi";
-
-import {
-  fetchMcpAlerts,
-  fetchMcpAnalysis,
-  fetchMcpComparison,
-} from "./mcpClient.js";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -551,7 +550,7 @@ app.post("/connect-es", async (req, res) => {
       rejectUnauthorized: false,
     };
   }
-  const esClient = new ElasticsearchService({ clientOptions });
+  const esClient = new ElasticRunListService({ clientOptions });
 
   try {
     const data = await esClient.fetchRunDetails(
@@ -580,6 +579,7 @@ app.post("/summary", async (req, res) => {
       host,
       username,
       password,
+      use_ssl,
       index,
       start_date,
       end_date,
@@ -588,9 +588,10 @@ app.post("/summary", async (req, res) => {
       filters,
     } = req.body.params;
 
-    const summary = await fetchMcpAnalysis({
-      es_url: `https://${host}`,
-      es_index: index,
+    const summary = await fetchSummaryFromOpenSearch({
+      host,
+      use_ssl,
+      index,
       username,
       password,
       start_date,
@@ -611,6 +612,7 @@ app.post("/comparison", async (req, res) => {
       host,
       username,
       password,
+      use_ssl,
       index,
       start_date,
       end_date,
@@ -620,9 +622,10 @@ app.post("/comparison", async (req, res) => {
       group_by,
     } = req.body.params;
 
-    const summary = await fetchMcpComparison({
-      es_url: `https://${host}`,
-      es_index: index,
+    const summary = await fetchComparisonFromOpenSearch({
+      host,
+      use_ssl,
+      index,
       username,
       password,
       start_date,
@@ -644,6 +647,7 @@ app.post("/alertsAnalysis", async (req, res) => {
       host,
       username,
       password,
+      use_ssl,
       index,
       start_date,
       end_date,
@@ -651,9 +655,10 @@ app.post("/alertsAnalysis", async (req, res) => {
       offset,
     } = req.body.params;
 
-    const summary = await fetchMcpAlerts({
-      es_url: `https://${host}`,
-      es_index: index,
+    const summary = await fetchAlertsFromOpenSearch({
+      host,
+      use_ssl,
+      index,
       username,
       password,
       start_date,

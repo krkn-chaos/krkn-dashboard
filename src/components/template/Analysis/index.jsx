@@ -66,7 +66,7 @@ const Analysis = () => {
           <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
             <FlexItem>
               <TextContent>
-                <Text component={TextVariants.h3}>Elastic Search Runs</Text>
+                <Text component={TextVariants.h3}>Elastic Search</Text>
                 <Text component={TextVariants.small}>
                   Connected to: {connectionInfo.host}
                   {connectionInfo.index && ` | Index: ${connectionInfo.index}`}

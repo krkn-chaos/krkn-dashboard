@@ -1,9 +1,11 @@
-import { Client } from "@opensearch-project/opensearch";
-// import { Client } from '@elastic/elasticsearch';
+import { createOpenSearchClientFromOptions } from "./client.js";
 
-export class ElasticsearchService {
+/**
+ * Paginated telemetry runs + facet aggs for the Elastic Runs **Runs** table and connect flow.
+ */
+export class ElasticRunListService {
   constructor({ clientOptions }) {
-    this.client = new Client(clientOptions);
+    this.client = createOpenSearchClientFromOptions(clientOptions);
   }
 
   async fetchRunDetails(
@@ -97,11 +99,8 @@ export class ElasticsearchService {
         },
       });
 
-      // Parse and return only the required fields
       const parsedData = await Promise.all(
-        result.body.hits.hits.map((hit) =>
-          this.parseRunDetails(hit._source, hit._id)
-        )
+        result.body.hits.hits.map((hit) => this.parseRunDetails(hit._source, hit._id))
       );
       const filters = parseFilters(result.body.aggregations);
       return {
@@ -210,6 +209,7 @@ export class ElasticsearchService {
     return parsedData;
   }
 }
+
 const NAME_MAP = {
   job_status: "Status",
   major_version: "Version",
