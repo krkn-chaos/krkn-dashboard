@@ -1,6 +1,5 @@
 export const OVERVIEW = "overview";
 export const NEW_EXPERIMENT = "new-experiment";
-export const HISTORY = "history";
 export const RESULTS = "results";
-export const METRICS = "METRICS";
-export const SUMMARY = "summary";
+export const PAST_RUNS = "past-runs";
+export const ELASTIC_RUNS = "elastic-runs";

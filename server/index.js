@@ -4,10 +4,17 @@ import * as path from "path";
 import {
   deleteConfig,
   getConfig,
+  getDetailsForAnalytics,
   getResults,
   saveConfig,
   savePodDetails,
 } from "./db.js";
+import {
+  computeStats,
+  filterByNameRegex,
+  filterRowsByOutcome,
+  rowOutcome,
+} from "./pastRuns.js";
 
 import { fetchGrafanaDashboardList } from "./grafanaDashboardIndex.js";
 import { ElasticsearchService } from "./elasticsearchService.js";
@@ -291,6 +298,72 @@ app.get("/getResults", async (req, res) => {
     return res.json(error);
   }
 });
+
+/** Local DB past runs: filters (dates, image, name regex) + optional outcome table slice. */
+app.post("/past-runs", async (req, res) => {
+  try {
+    const {
+      nameRegex = "",
+      imageContains = "",
+      startDate = "",
+      endDate = "",
+      outcome = "all",
+      page = 1,
+      perPage = 25,
+    } = req.body || {};
+    let rows = await getDetailsForAnalytics({
+      startDate,
+      endDate,
+      imageContains,
+    });
+    const nameFilter = filterByNameRegex(rows, nameRegex);
+    if (nameFilter.error) {
+      return res
+        .status(400)
+        .json({ error: `Invalid name regex: ${nameFilter.error}` });
+    }
+    rows = nameFilter.rows;
+    const stats = computeStats(rows);
+    const tableRows = filterRowsByOutcome(rows, outcome).map((r) => ({
+      ...r,
+      outcome: rowOutcome(r),
+    }));
+    const safePerPage = Math.min(
+      25,
+      Math.max(1, parseInt(String(perPage), 10) || 25)
+    );
+    const safePage = Math.max(1, parseInt(String(page), 10) || 1);
+    const itemCount = tableRows.length;
+    const totalPages = Math.max(1, Math.ceil(itemCount / safePerPage));
+    const normalizedPage = Math.min(safePage, totalPages);
+    const start = (normalizedPage - 1) * safePerPage;
+    const end = start + safePerPage;
+    const pagedRows = tableRows.slice(start, end);
+    return res.json({
+      stats,
+      runs: pagedRows,
+      pagination: {
+        page: normalizedPage,
+        perPage: safePerPage,
+        itemCount,
+        totalPages,
+      },
+      filters: {
+        nameRegex,
+        imageContains,
+        startDate,
+        endDate,
+        outcome,
+      },
+    });
+  } catch (err) {
+    console.error("past-runs:", err);
+    return res
+      .status(500)
+      .json({ error: err?.message || "Failed to load runs" });
+  }
+});
+
 app.post("/deleteConfig", async (req, res) => {
   try {
     const result = await deleteConfig(req.body.params);

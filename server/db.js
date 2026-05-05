@@ -130,6 +130,35 @@ export const getResults = () => {
   });
 };
 
+/** Filter by stored date (inclusive) and optional image substring (SQLite; name regex applied in API). */
+export const getDetailsForAnalytics = ({ startDate, endDate, imageContains }) => {
+  return new Promise((resolve, reject) => {
+    const conditions = [];
+    const params = [];
+    if (startDate && String(startDate).trim()) {
+      conditions.push("date(COALESCE(stored_at, '')) >= date(?)");
+      params.push(String(startDate).trim());
+    }
+    if (endDate && String(endDate).trim()) {
+      conditions.push("date(COALESCE(stored_at, '')) <= date(?)");
+      params.push(String(endDate).trim());
+    }
+    if (imageContains && String(imageContains).trim()) {
+      conditions.push("lower(image) LIKE lower(?)");
+      params.push(`%${String(imageContains).trim()}%`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const sql = `SELECT * FROM details ${where} ORDER BY COALESCE(stored_at, '') DESC, rowid DESC`;
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        reject({ status: 300, message: "error querying details", error: err });
+      } else {
+        resolve(rows || []);
+      }
+    });
+  });
+};
+
 export const deleteConfig = (id) => {
   return new Promise((resolve, reject) => {
     const sql = `DELETE FROM config WHERE id=(?)`;

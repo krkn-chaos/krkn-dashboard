@@ -1,27 +1,32 @@
+import "./index.less";
+
 import {
-  Tabs,
-  Tab,
-  TabTitleText,
+  Button,
   Card,
   CardBody,
-  Grid,
-  GridItem,
+  CardTitle,
   Flex,
   FlexItem,
+  Grid,
+  GridItem,
+  Tab,
+  Tabs,
+  TabTitleText,
   Text,
   TextContent,
   TextVariants,
-  Button,
 } from "@patternfly/react-core";
 import React, { useState } from "react";
-import Summary from "../Summary/index";
+
 import AlertAnalysis from "../AlertAnalysis/index";
 import ComparisonView from "../Comparison/index";
-import { useSelector, useDispatch } from "react-redux";
-import StorageTableFilter from "@/components/molecules/StorageTableFilter";
 import MetricCard from "@/components/molecules/MetricsCard";
+import Summary from "../Summary/index";
+import { useDispatch, useSelector } from "react-redux";
 
 import ESConnectForm from "@/components/organisms/ESConnectForm";
+import StorageTable from "@/components/organisms/StorageTable";
+import StorageTableFilter from "@/components/molecules/StorageTableFilter";
 import { disconnectES } from "@/actions/storageActions";
 
 const Analysis = () => {
@@ -43,49 +48,52 @@ const Analysis = () => {
     setActiveTabKey(tabIndex);
   };
 
+  if (!connectionInfo.isConnected) {
+    return (
+      <Card>
+        <CardTitle>Connect to elastic search</CardTitle>
+        <CardBody>
+          <ESConnectForm />
+        </CardBody>
+      </Card>
+    );
+  }
+
   return (
     <>
       <Card>
         <CardBody>
-          {connectionInfo.isConnected ? (
-            <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
-              <FlexItem>
-                <TextContent>
-                  <Text component={TextVariants.small}>
-                    Connected to: {connectionInfo.host}
-                    {connectionInfo.index &&
-                      ` | Index: ${connectionInfo.index}`}
-                  </Text>
-                </TextContent>
-              </FlexItem>
-              <FlexItem>
-                <Button
-                  variant="link"
-                  isSmall
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    dispatch(disconnectES());
-                  }}
-                >
-                  Disconnect
-                </Button>
-              </FlexItem>
-            </Flex>
-          ) : (
-            <Card>
-              <CardBody>
-                <ESConnectForm />
-              </CardBody>
-            </Card>
-          )}
+          <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
+            <FlexItem>
+              <TextContent>
+                <Text component={TextVariants.h3}>Elastic Search Runs</Text>
+                <Text component={TextVariants.small}>
+                  Connected to: {connectionInfo.host}
+                  {connectionInfo.index && ` | Index: ${connectionInfo.index}`}
+                </Text>
+              </TextContent>
+            </FlexItem>
+            <FlexItem>
+              <Button
+                variant="link"
+                isSmall
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch(disconnectES());
+                }}
+              >
+                Disconnect
+              </Button>
+            </FlexItem>
+          </Flex>
         </CardBody>
       </Card>
       <Tabs
         activeKey={activeTabKey}
-        aria-label="Analysis Tabs"
+        aria-label="Elastic runs tabs"
         onSelect={handleTabClick}
       >
-        <Tab eventKey={0} title={<TabTitleText>Summary</TabTitleText>}>
+        <Tab eventKey={0} title={<TabTitleText>Summary and Runs</TabTitleText>}>
           {aggregations?.summary && (
             <Card>
               <CardBody>
@@ -109,6 +117,14 @@ const Analysis = () => {
             </Card>
           )}
           {group_by === "Status" ? <Summary /> : <ComparisonView />}
+          <div className="elastic-runs__runs-section">
+            <Card>
+            <CardTitle>Runs</CardTitle>
+            <CardBody>
+              <StorageTable />
+            </CardBody>
+            </Card>
+          </div>
         </Tab>
         <Tab eventKey={1} title={<TabTitleText>Alert Analysis</TabTitleText>}>
           <AlertAnalysis />

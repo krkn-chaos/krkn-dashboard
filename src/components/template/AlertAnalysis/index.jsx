@@ -12,7 +12,7 @@ const AlertAnalysis = () => {
     dispatch(fetchAlertsData());
   }, [dispatch]);
 
-  const columns = ["Scenario Type", "Alert Message", "Severity"];
+  const columns = ["UUID", "Scenario Type", "Alert Message", "Severity"];
 
   if (!alerts || !alerts.alerts) {
     return <div>No alerts data found.</div>;
@@ -43,8 +43,11 @@ const AlertAnalysis = () => {
             const sev = String(alert.severity ?? "N/A");
             return (
               <Tr key={rowIndex}>
-                <Td dataLabel={columns[0]}>{alert.scenario_type}</Td>
-                <Td dataLabel={columns[1]}>
+                <Td dataLabel={columns[0]}>
+                  {alert.run_uuid || "—"}
+                </Td>
+                <Td dataLabel={columns[1]}>{alert.scenario_type}</Td>
+                <Td dataLabel={columns[2]}>
                   <Tooltip content={alert.alert}>
                     <span>
                       {alert.alert && alert.alert.length > 85
@@ -53,7 +56,7 @@ const AlertAnalysis = () => {
                     </span>
                   </Tooltip>
                 </Td>
-                <Td dataLabel={columns[2]}>
+                <Td dataLabel={columns[3]}>
                   <Label color={getRiskClass(alert.severity)}>
                     {sev.charAt(0).toUpperCase() + sev.slice(1)}
                   </Label>

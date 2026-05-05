@@ -15,32 +15,14 @@ const sideMenuOptions = [
   },
   {
     id: 1,
-    key: "history",
-    displayName: "History",
-    icon: <CatalogIcon />,
-  },
-  // {
-  //   id: 2,
-  //   key: "results",
-  //   displayName: "Results",
-  //   icon: <CatalogIcon />,
-  // },
-  // {
-  //   id: 3,
-  //   key: "archives",
-  //   displayName: "Archives",
-  //   icon: <CatalogIcon />,
-  // },
-  {
-    id: 4,
-    key: "metrics",
-    displayName: "Metrics",
+    key: "past-runs",
+    displayName: "Past Runs",
     icon: <CatalogIcon />,
   },
   {
-    id: 5,
-    key: "summary",
-    displayName: "Summary",
+    id: 2,
+    key: "elastic-runs",
+    displayName: "Elastic Runs",
     icon: <CatalogIcon />,
   },
 ];
@@ -54,8 +36,10 @@ const MenuOptions = () => {
   const { pathname } = useLocation();
 
   const onSelect = (_event, itemId) => {
-    const item = itemId;
-    dispatch(setActiveItem(item));
+    const selected = sideMenuOptions.find((option) => option.id === itemId);
+    if (selected?.key) {
+      dispatch(setActiveItem(selected.key));
+    }
   };
 
   useEffect(() => {

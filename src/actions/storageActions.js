@@ -78,7 +78,8 @@ export const esConnect = (data) => async (dispatch, getState) => {
         type: TYPES.SET_FILTER_DATA,
         payload: response.data.results.filters,
       });
-      if (window.location.pathname.toLowerCase().includes("summary")) {
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes("summary") || path.includes("elastic-runs")) {
         dispatch(fetchSummaryData());
       }
     }

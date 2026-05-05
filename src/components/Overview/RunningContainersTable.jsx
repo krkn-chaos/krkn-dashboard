@@ -1,4 +1,4 @@
-import "@/components/template/DetailsTable/index.less";
+import "./RunningContainersTable.less";
 
 import { Label, Title } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
