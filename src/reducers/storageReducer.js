@@ -1,14 +1,6 @@
 import * as TYPES from "@/actions/types";
 
-import { formatDate } from "@/utils/helper";
-
-// Calculate start_date as 5 days before today
-const getStartDate = () => {
-  const today = new Date();
-  const fiveDaysAgo = new Date(today);
-  fiveDaysAgo.setDate(today.getDate() - 5);
-  return formatDate(fiveDaysAgo);
-};
+import { formatDate, getStartDate } from "@/utils/helper";
 
 const initialState = {
   results: [],

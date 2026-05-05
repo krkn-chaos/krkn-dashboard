@@ -4,13 +4,25 @@ import * as path from "path";
 import {
   deleteConfig,
   getConfig,
+  getDetailsForAnalytics,
   getResults,
   saveConfig,
   savePodDetails,
 } from "./db.js";
+import {
+  ElasticRunListService,
+  fetchAlertsFromOpenSearch,
+  fetchComparisonFromOpenSearch,
+  fetchSummaryFromOpenSearch,
+} from "./opensearch/index.js";
+import {
+  computeStats,
+  filterByNameRegex,
+  filterRowsByOutcome,
+  rowOutcome,
+} from "./pastRuns.js";
 
 import { fetchGrafanaDashboardList } from "./grafanaDashboardIndex.js";
-import { ElasticsearchService } from "./elasticsearchService.js";
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
@@ -56,14 +68,7 @@ const EXEC_LARGE_MAX_BUFFER = { maxBuffer: 1024 * 1024 * 50 };
 function getPodmanRunPlatformPrefix() {
   const fromEnv = process.env.PODMAN_PLATFORM?.trim();
   if (fromEnv) return `--platform ${fromEnv} `;
-  switch (process.arch) {
-    case "arm64":
-      return "--platform linux/arm64 ";
-    case "x64":
-      return "--platform linux/amd64 ";
-    default:
-      return "--platform linux/amd64 ";
-  }
+  return "--platform linux/amd64 ";
 }
 const PODMAN_RUN_PLATFORM_PREFIX = getPodmanRunPlatformPrefix();
 
@@ -162,22 +167,25 @@ app.post("/start-kraken/", (req, res) => {
       command = `echo 'No scenario selected'`;
   }
   console.log(command);
-  child_process.exec(command, (err, stdout, stderr) => {
-    const isSuccess = !err && !stderr;
-
-    if (isSuccess) {
+  child_process.exec(command, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
+    if (stderr && !err) {
+      console.log("[start-kraken] podman stderr (informational):", stripAnsi(stderr).slice(0, 2000));
+    }
+    if (!err) {
       res.status(200).json({
         message: "Successfully created the container!",
         name: req.body.params.name,
         status: "200",
       });
       myInterval = setInterval(() => myFunc(req.body.params.name), 1000 * 9);
-    } else {
-      res.status(500).json({
-        message: stderr || err?.message || "Unknown error",
-        status: "failed",
-      });
+      return;
     }
+    const detail = [stderr, stdout].filter(Boolean).join("\n") || err.message;
+    console.error("[start-kraken] failed:", err.message, detail);
+    res.status(500).json({
+      message: detail || "Unknown error",
+      status: "failed",
+    });
   });
 });
 
@@ -289,6 +297,72 @@ app.get("/getResults", async (req, res) => {
     return res.json(error);
   }
 });
+
+/** Local DB past runs: filters (dates, image, name regex) + optional outcome table slice. */
+app.post("/past-runs", async (req, res) => {
+  try {
+    const {
+      nameRegex = "",
+      imageContains = "",
+      startDate = "",
+      endDate = "",
+      outcome = "all",
+      page = 1,
+      perPage = 25,
+    } = req.body || {};
+    let rows = await getDetailsForAnalytics({
+      startDate,
+      endDate,
+      imageContains,
+    });
+    const nameFilter = filterByNameRegex(rows, nameRegex);
+    if (nameFilter.error) {
+      return res
+        .status(400)
+        .json({ error: `Invalid name regex: ${nameFilter.error}` });
+    }
+    rows = nameFilter.rows;
+    const stats = computeStats(rows);
+    const tableRows = filterRowsByOutcome(rows, outcome).map((r) => ({
+      ...r,
+      outcome: rowOutcome(r),
+    }));
+    const safePerPage = Math.min(
+      25,
+      Math.max(1, parseInt(String(perPage), 10) || 25)
+    );
+    const safePage = Math.max(1, parseInt(String(page), 10) || 1);
+    const itemCount = tableRows.length;
+    const totalPages = Math.max(1, Math.ceil(itemCount / safePerPage));
+    const normalizedPage = Math.min(safePage, totalPages);
+    const start = (normalizedPage - 1) * safePerPage;
+    const end = start + safePerPage;
+    const pagedRows = tableRows.slice(start, end);
+    return res.json({
+      stats,
+      runs: pagedRows,
+      pagination: {
+        page: normalizedPage,
+        perPage: safePerPage,
+        itemCount,
+        totalPages,
+      },
+      filters: {
+        nameRegex,
+        imageContains,
+        startDate,
+        endDate,
+        outcome,
+      },
+    });
+  } catch (err) {
+    console.error("past-runs:", err);
+    return res
+      .status(500)
+      .json({ error: err?.message || "Failed to load runs" });
+  }
+});
+
 app.post("/deleteConfig", async (req, res) => {
   try {
     const result = await deleteConfig(req.body.params);
@@ -297,10 +371,22 @@ app.post("/deleteConfig", async (req, res) => {
     return res.json(error);
   }
 });
+/** Persist finished container logs + inspect metadata to SQLite (reliable vs tee pipeline). */
+const persistCompletedRun = (podName) => {
+  const cmd = `${PODMAN} logs ${podName} 2>&1`;
+  child_process.exec(cmd, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
+    const logText =
+      (typeof stdout === "string" ? stdout : stdout?.toString?.() || "") ||
+      (typeof stderr === "string" ? stderr : stderr?.toString?.() || "") ||
+      "";
+    savePodDetailsToFile(podName, logText);
+  });
+};
+
 const frame = async (status, podName) => {
   if (status === "exited") {
     clearInterval(myInterval);
-    saveLogs(podName);
+    persistCompletedRun(podName);
   }
 };
 const myFunc = (podName) => {
@@ -326,13 +412,24 @@ const savePodDetailsToFile = async (podName, fileContent) => {
     if (stdout) {
       try {
         const d = JSON.parse(stdout);
+        const row = Array.isArray(d) ? d[0] : d;
+        const mountDest =
+          row?.Mounts?.[0]?.Destination ??
+          row?.Mounts?.[0]?.Source ??
+          "";
+        const displayName =
+          typeof row?.Name === "string"
+            ? row.Name
+            : Array.isArray(row?.Names)
+              ? row.Names[0]
+              : podName;
         await savePodDetails(
-          d[0].Id,
-          d[0].ImageName,
-          d[0].Mounts[0].Destination,
-          d[0].State.Status,
-          d[0].State.ExitCode,
-          d[0].Name,
+          row.Id,
+          row.ImageName || row.Image || "",
+          mountDest,
+          row.State?.Status ?? "",
+          String(row.State?.ExitCode ?? ""),
+          displayName,
           fileContent
         );
       } catch (error) {
@@ -344,33 +441,30 @@ const savePodDetailsToFile = async (podName, fileContent) => {
   });
 };
 
-const saveLogs = (podName) => {
-  const command = `${PODMAN} logs -f ${podName}  |& tee -a ${podName}_logs.log`;
-  child_process.exec(command, (err, stdout, stderr) => {
-    if (stdout) {
-      fs.readFile(`${podName}_logs.log`, "utf8", (err, data) => {
-        if (err) {
-          console.error("Error reading file:", err);
-          return;
-        }
-
-        // Call function to store in SQLite database
-
-        savePodDetailsToFile(podName, data);
-      });
-    } else if (stderr) {
-      return console.log("cannot save logs error");
-    }
-  });
-};
-
 app.post("/downloadLogs", (req, res) => {
-  const podName = req.body.params.container;
-  const logFilePath = path.join(__dirname, "podman-logs.txt");
+  const podName = req.body?.params?.container;
+  if (!podName || typeof podName !== "string") {
+    return res.status(400).json({ error: "Missing or invalid container name" });
+  }
 
-  const podmanProcess = child_process.spawn("podman", ["logs", "-f", podName]);
+  const logFilePath = path.join(__dirname, "podman-logs.txt");
+  const podmanProcess = child_process.spawn(PODMAN, ["logs", "-f", podName]);
 
   const logStream = fs.createWriteStream(logFilePath, { flags: "w" });
+
+  podmanProcess.on("error", (err) => {
+    console.error("downloadLogs spawn error:", err.message);
+    try {
+      logStream.end();
+    } catch (_) {
+      /* ignore */
+    }
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Podman is not available or the container was not found.",
+      });
+    }
+  });
 
   podmanProcess.stdout.on("data", (data) => logStream.write(data));
   podmanProcess.stderr.on("data", (data) => logStream.write(data));
@@ -456,7 +550,7 @@ app.post("/connect-es", async (req, res) => {
       rejectUnauthorized: false,
     };
   }
-  const esClient = new ElasticsearchService({ clientOptions });
+  const esClient = new ElasticRunListService({ clientOptions });
 
   try {
     const data = await esClient.fetchRunDetails(
@@ -475,6 +569,105 @@ app.post("/connect-es", async (req, res) => {
     });
   } catch (err) {
     console.error("Elasticsearch error:", err);
+    res.status(500).json({ message: "Connection failed", error: err.message });
+  }
+});
+
+app.post("/summary", async (req, res) => {
+  try {
+    const {
+      host,
+      username,
+      password,
+      use_ssl,
+      index,
+      start_date,
+      end_date,
+      size,
+      offset,
+      filters,
+    } = req.body.params;
+
+    const summary = await fetchSummaryFromOpenSearch({
+      host,
+      use_ssl,
+      index,
+      username,
+      password,
+      start_date,
+      end_date,
+      size,
+      offset,
+      filters,
+    });
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ message: "Connection failed", error: err.message });
+  }
+});
+
+app.post("/comparison", async (req, res) => {
+  try {
+    const {
+      host,
+      username,
+      password,
+      use_ssl,
+      index,
+      start_date,
+      end_date,
+      size,
+      offset,
+      filters,
+      group_by,
+    } = req.body.params;
+
+    const summary = await fetchComparisonFromOpenSearch({
+      host,
+      use_ssl,
+      index,
+      username,
+      password,
+      start_date,
+      end_date,
+      size,
+      offset,
+      filters,
+      group_by,
+    });
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ message: "Connection failed", error: err.message });
+  }
+});
+
+app.post("/alertsAnalysis", async (req, res) => {
+  try {
+    const {
+      host,
+      username,
+      password,
+      use_ssl,
+      index,
+      start_date,
+      end_date,
+      size,
+      offset,
+    } = req.body.params;
+
+    const summary = await fetchAlertsFromOpenSearch({
+      host,
+      use_ssl,
+      index,
+      username,
+      password,
+      start_date,
+      end_date,
+      size,
+      offset,
+    });
+    res.json(summary);
+  } catch (err) {
     res.status(500).json({ message: "Connection failed", error: err.message });
   }
 });

@@ -8,6 +8,7 @@ import {
   setDateRange,
   setSelectedFilter,
 } from "@/actions/storageActions.js";
+import { setSummaryDateRange } from "@/actions/summaryActions";
 import { useDispatch, useSelector } from "react-redux";
 
 import DatePicker from "react-date-picker";
@@ -22,7 +23,7 @@ import { useNavigate } from "react-router-dom";
 const StorageTableFilter = (props) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { start_date, end_date } = props;
+  const { start_date, end_date, type } = props;
   const {
     filterData,
     categoryFilterValue,
@@ -30,8 +31,15 @@ const StorageTableFilter = (props) => {
     selectedFilters,
     appliedFilters,
   } = useSelector((state) => state.storage);
+
+  const { group_by } = useSelector((state) => state.summary);
+
   const dateChangeHandler = (date, key) => {
-    dispatch(setDateRange(date, key));
+    if (type === "summary") {
+      dispatch(setSummaryDateRange(date, key));
+    } else {
+      dispatch(setDateRange(date, key));
+    }
   };
 
   const getFilterCategory = (name) => {
@@ -46,7 +54,7 @@ const StorageTableFilter = (props) => {
     }, {});
     const _ = await import("lodash");
     if (!_.isEqual(selectedFilterObj, appliedFilters)) {
-      dispatch(setAppliedFilters(navigate));
+      dispatch(setAppliedFilters(navigate, type));
     }
   };
   const updateSelectedFilter = (value) => {
@@ -63,7 +71,7 @@ const StorageTableFilter = (props) => {
               options={filterData}
               selected={categoryFilterValue || "Select the Category"}
               icon={<FilterIcon />}
-              width={"200px"}
+              width="250px"
               type="test"
             />
           </ToolbarItem>
@@ -74,9 +82,23 @@ const StorageTableFilter = (props) => {
               applyMethod={onOptionsChange}
               currCategory={category}
               selected={selectedFilters?.find((i) => i.name === category)}
-              width={"300px"}
+              width="300px"
             />
           </ToolbarItem>
+          {type === "summary" && (
+            <>
+              <ToolbarItem variant="label">Group By</ToolbarItem>
+              <ToolbarItem style={{ marginInlineEnd: 0 }}>
+                <SelectBasic
+                  options={filterData}
+                  selected={group_by || "Select the Group By"}
+                  icon={<FilterIcon />}
+                  width="200px"
+                  type="summary"
+                />
+              </ToolbarItem>
+            </>
+          )}
         </ToolbarContent>
 
         <ToolbarContent className="date-filter" ouiaId="date_filter">
@@ -109,5 +131,6 @@ const StorageTableFilter = (props) => {
 StorageTableFilter.propTypes = {
   start_date: PropTypes.string,
   end_date: PropTypes.string,
+  type: PropTypes.string,
 };
 export default StorageTableFilter;

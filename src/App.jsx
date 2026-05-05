@@ -5,11 +5,11 @@ import * as APP_ROUTES from "./utils/routeConstants";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import React, { useEffect } from "react";
 
-import Experiments from "@/components/template/Experiments";
 import MainLayout from "@/container/MainLayout";
-import MetricsStorage from "@/components/template/MetricsStorage";
 import Overview from "@/components/Overview";
+import PastRuns from "@/components/template/PastRuns";
 import Results from "@/components/template/Results";
+import Analysis from "@/components/template/Analysis";
 import { checkPodmanInstalled } from "@/actions/newExperiment.js";
 import { useDispatch } from "react-redux";
 
@@ -24,9 +24,9 @@ function App() {
         <Routes>
           <Route element={<MainLayout />}>
             <Route path={APP_ROUTES.OVERVIEW} element={<Overview />} />
-            <Route path={APP_ROUTES.EXPERIMENTS} element={<Experiments />} />
             <Route path={APP_ROUTES.RESULTS} element={<Results />} />
-            <Route path={APP_ROUTES.METRICS} element={<MetricsStorage />} />
+            <Route path={APP_ROUTES.ELASTIC_RUNS} element={<Analysis />} />
+            <Route path={APP_ROUTES.PAST_RUNS} element={<PastRuns />} />
             <Route index element={<Overview />} />
           </Route>
         </Routes>

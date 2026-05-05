@@ -10,31 +10,19 @@ const sideMenuOptions = [
   {
     id: 0,
     key: "overview",
-    displayName: "Overview",
+    displayName: "Run Kraken",
     icon: <CatalogIcon />,
   },
   {
     id: 1,
-    key: "experiments",
-    displayName: "Experiments",
+    key: "past-runs",
+    displayName: "Past Runs",
     icon: <CatalogIcon />,
   },
-  // {
-  //   id: 2,
-  //   key: "results",
-  //   displayName: "Results",
-  //   icon: <CatalogIcon />,
-  // },
-  // {
-  //   id: 3,
-  //   key: "archives",
-  //   displayName: "Archives",
-  //   icon: <CatalogIcon />,
-  // },
   {
-    id: 4,
-    key: "metrics",
-    displayName: "Metrics",
+    id: 2,
+    key: "elastic-runs",
+    displayName: "Elastic Runs",
     icon: <CatalogIcon />,
   },
 ];
@@ -48,8 +36,10 @@ const MenuOptions = () => {
   const { pathname } = useLocation();
 
   const onSelect = (_event, itemId) => {
-    const item = itemId;
-    dispatch(setActiveItem(item));
+    const selected = sideMenuOptions.find((option) => option.id === itemId);
+    if (selected?.key) {
+      dispatch(setActiveItem(selected.key));
+    }
   };
 
   useEffect(() => {

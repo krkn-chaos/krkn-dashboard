@@ -4,6 +4,7 @@
     animation: rotation 2s infinite linear;
   }
 }
+
 .state-class {
   text-transform: capitalize;
 }
@@ -16,9 +17,11 @@
     transform: rotate(359deg);
   }
 }
+
 .flash-box {
   padding-left: 10px;
 }
+
 .dot-flashing {
   position: relative;
   width: 10px;
@@ -29,6 +32,7 @@
   animation: dot-flashing 1s infinite linear alternate;
   animation-delay: 0.5s;
 }
+
 .dot-flashing::before,
 .dot-flashing::after {
   content: "";
@@ -42,10 +46,12 @@
   color: #0091D5;
   animation: dot-flashing 1s infinite alternate;
 }
+
 .dot-flashing::before {
   left: 13px;
   animation-delay: 0s;
 }
+
 .dot-flashing::after {
   left: 25px;
   animation-delay: 1s;

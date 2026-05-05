@@ -4,6 +4,7 @@ import API from "@/utils/axiosInstance";
 import { appendQueryString } from "@/utils/helper.js";
 import { cloneDeep } from "lodash";
 import { showToast } from "./toastActions";
+import { fetchSummaryData } from "./summaryActions";
 
 export const esConnect = (data) => async (dispatch, getState) => {
   try {
@@ -77,6 +78,10 @@ export const esConnect = (data) => async (dispatch, getState) => {
         type: TYPES.SET_FILTER_DATA,
         payload: response.data.results.filters,
       });
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes("summary") || path.includes("elastic-runs")) {
+        dispatch(fetchSummaryData());
+      }
     }
   } catch (error) {
     dispatch({
@@ -222,22 +227,26 @@ export const setSelectedFilter =
       payload: selectedFilters,
     });
   };
-export const setAppliedFilters = (navigate) => (dispatch, getState) => {
-  const { start_date, end_date, selectedFilters, connectionInfo } =
-    getState().storage;
-  const appliedFilterArr = selectedFilters.filter((i) => i.value.length > 0);
+export const setAppliedFilters =
+  (navigate, pageType) => (dispatch, getState) => {
+    const { start_date, end_date, selectedFilters, connectionInfo } =
+      getState().storage;
+    const appliedFilterArr = selectedFilters.filter((i) => i.value.length > 0);
 
-  const appliedFilters = {};
-  appliedFilterArr.forEach((item) => {
-    appliedFilters[item["name"]] = item.value;
-  });
+    const appliedFilters = {};
+    appliedFilterArr.forEach((item) => {
+      appliedFilters[item["name"]] = item.value;
+    });
 
-  dispatch({
-    type: TYPES.SET_APPLIED_FILTERS,
-    payload: appliedFilters,
-  });
-  appendQueryString({ ...appliedFilters, start_date, end_date }, navigate);
-  // dispatch(applyFilters());
+    dispatch({
+      type: TYPES.SET_APPLIED_FILTERS,
+      payload: appliedFilters,
+    });
+    appendQueryString({ ...appliedFilters, start_date, end_date }, navigate);
 
-  dispatch(esConnect(connectionInfo));
-};
+    if (pageType === "summary") {
+      dispatch(fetchSummaryData());
+    } else {
+      dispatch(esConnect(connectionInfo));
+    }
+  };
