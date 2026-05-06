@@ -45,6 +45,33 @@ app.use(express.json());
 
 /* Set path to upload config file */
 const uploadFilePath = path.resolve(__dirname, "../", "src/assets");
+
+function getChaosAssetsRoot() {
+  return (process.env.CHAOS_ASSETS || "").trim().replace(/\/+$/, "");
+}
+
+function getUploadKubeconfigPath() {
+  return path.join(uploadFilePath, "kubeconfig");
+}
+
+function getOrchestratorKubeconfigPath() {
+  return path.join(getChaosAssetsRoot(), "kubeconfig");
+}
+
+/**
+ * Local: always the uploaded/mounted file under `src/assets/kubeconfig`.
+ * External container: uploaded file (overwrites mount) when `isFileUpload`; otherwise `CHAOS_ASSETS/kubeconfig`.
+ */
+function resolveKubeconfigPathForRequest(isFileUpload) {
+  if ((process.env.EXTERNAL_CONTAINER_BUILD || "").trim() === "true") {
+    if (isFileUpload) {
+      return getUploadKubeconfigPath();
+    }
+    return getOrchestratorKubeconfigPath();
+  }
+  return getUploadKubeconfigPath();
+}
+
 let myInterval;
 
 chmodr(uploadFilePath, 0o777, (err) => {
@@ -55,7 +82,7 @@ chmodr(uploadFilePath, 0o777, (err) => {
   }
 });
 let PODMAN = "";
-if (process.env.CONTAINER_BUILD) {
+if (process.env.EXTERNAL_CONTAINER_BUILD) {
   PODMAN = "podman-remote";
 } else {
   PODMAN = "podman";
@@ -74,7 +101,7 @@ const PODMAN_RUN_PLATFORM_PREFIX = getPodmanRunPlatformPrefix();
 
 // Validates the podman socket before starting a container instance
 if (
-  process.env.CONTAINER_BUILD &&
+  process.env.EXTERNAL_CONTAINER_BUILD &&
   !fs.existsSync("/run/podman/podman.sock") &&
   !process.env.CONTAINER_HOST
 ) {
@@ -84,7 +111,7 @@ if (
       "or set CONTAINER_HOST for a TCP API. See containers/podman-run.sh."
   );
 } else if (
-  process.env.CONTAINER_BUILD &&
+  process.env.EXTERNAL_CONTAINER_BUILD &&
   fs.existsSync("/run/podman/podman.sock") &&
   !process.env.CONTAINER_HOST
 ) {
@@ -103,39 +130,18 @@ if (
 
 app.post("/start-kraken/", (req, res) => {
   const scenario = req.body.params.scenarioChecked;
-  let kubeConfigPath = "";
+  const isFileUpload = Boolean(req.body.params?.isFileUpload);
 
-  if (process.env.CONTAINER_BUILD) {
-    kubeConfigPath = `${process.env.CHAOS_ASSETS}/kubeconfig`;
-  } else {
-    kubeConfigPath = req.body.params.isFileUpload
-      ? `${uploadFilePath}/kubeconfig`
-      : req.body.params.kubeconfigPath;
-  }
-
-  if (!kubeConfigPath || kubeConfigPath.startsWith("undefined/")) {
+  const kubeConfigFileLocation = resolveKubeconfigPathForRequest(isFileUpload);
+  if (!fs.existsSync(kubeConfigFileLocation)) {
     return res.status(400).json({
-      message:
-        "Invalid kubeconfig path. Set CHAOS_ASSETS in container mode or provide kubeconfigPath/upload a file.",
+      message: `kubeconfig not found at: ${kubeConfigFileLocation}. If the file exists elsewhere in the image, CHAOS_ASSETS is wrong for this image.`,
       status: "failed",
     });
   }
 
-  if (process.env.CONTAINER_BUILD) {
-    const uploadedKubeconfigPath = `${uploadFilePath}/kubeconfig`;
-    if (!fs.existsSync(uploadedKubeconfigPath)) {
-      return res.status(400).json({
-        message:
-          "kubeconfig not found in mounted assets. Upload kubeconfig or ensure src/assets/kubeconfig exists.",
-        status: "failed",
-      });
-    }
-  } else if (!fs.existsSync(kubeConfigPath)) {
-    return res.status(400).json({
-      message: `kubeconfig not found at: ${kubeConfigPath}`,
-      status: "failed",
-    });
-  }
+  // kubeconfig path: KUBECONFIG_PATH when set (e.g. host path for podman-remote) and fallback to the file location above when on npm run dev
+  const kubeConfigPath = (process.env.KUBECONFIG_PATH || "").trim() || kubeConfigFileLocation;
 
   let command = "";
   switch (scenario) {
@@ -167,10 +173,10 @@ app.post("/start-kraken/", (req, res) => {
       command = `echo 'No scenario selected'`;
   }
   console.log(command);
+  // Podman prints pull/progress to stderr; a non-empty stderr is normal. Only treat
+  // non-zero exit (err) as failure. Use a large buffer so first-time image pulls don't
+  // hit ERR_CHILD_PROCESS_STDIO_MAXBUFFER.
   child_process.exec(command, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
-    if (stderr && !err) {
-      console.log("[start-kraken] podman stderr (informational):", stripAnsi(stderr).slice(0, 2000));
-    }
     if (!err) {
       res.status(200).json({
         message: "Successfully created the container!",
@@ -178,6 +184,9 @@ app.post("/start-kraken/", (req, res) => {
         status: "200",
       });
       myInterval = setInterval(() => myFunc(req.body.params.name), 1000 * 9);
+      if (stderr) {
+        console.log("[start-kraken] podman stderr (informational):", stripAnsi(stderr).slice(0, 2000));
+      }
       return;
     }
     const detail = [stderr, stdout].filter(Boolean).join("\n") || err.message;
@@ -255,6 +264,17 @@ app.get("/removePod", (req, res) => {
       });
     }
     res.end();
+  });
+});
+
+app.get("/getKubeconfigContext", (req, res) => {
+  const external = (process.env.EXTERNAL_CONTAINER_BUILD || "").trim() === "true";
+  res.json({
+    // Upload is always available (including external container: optional override of orchestrator kubeconfig).
+    externallyBound: false,
+    pathDisplay: external
+      ? (process.env.KUBECONFIG_PATH || "").trim() || getOrchestratorKubeconfigPath()
+      : "",
   });
 });
 

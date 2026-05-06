@@ -6,6 +6,7 @@ IMAGE_NAME="chaos-dashboard:latest"
 CONTAINER_NAME="chaos-dashboard-app"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHAOS_ASSETS="$ROOT_DIR/src/assets"
+KUBECONFIG_PATH="${KUBECONFIG_PATH:-$CHAOS_ASSETS/kubeconfig}"
 
 # krkn-hub images are commonly amd64-only; default to amd64 for cross-machine compatibility.
 ARCH="$(uname -m)"
@@ -69,8 +70,11 @@ podman run -d \
   "${ENV_PLATFORM_ARGS[@]}" \
   ${GROUP_ARGS[@]+"${GROUP_ARGS[@]}"} \
   -e "CHAOS_ASSETS=$CHAOS_ASSETS" \
+  -e "KUBECONFIG_PATH=$KUBECONFIG_PATH" \
+  -e "EXTERNAL_CONTAINER_BUILD=false" \
   --security-opt label=disable \
   -v "$CHAOS_ASSETS:/usr/src/chaos-dashboard/src/assets:z" \
+  -v "$KUBECONFIG_PATH:/usr/src/chaos-dashboard/src/assets/kubeconfig:z" \
   -v "$ROOT_DIR/database:/usr/src/chaos-dashboard/database:z" \
   -v "$VM_SOCK_PATH:/run/podman/podman.sock:z" \
   -p 3000:3000 \

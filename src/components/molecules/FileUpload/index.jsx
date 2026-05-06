@@ -30,7 +30,6 @@ const KubeconfigFileUpload = () => {
         onClearClick={handleClear}
         browseButtonText="Upload"
       />
-      <span className="or-clause">or</span>
     </div>
   );
 };
