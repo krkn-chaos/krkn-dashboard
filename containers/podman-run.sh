@@ -12,7 +12,7 @@ KUBECONFIG_PATH="${KUBECONFIG_PATH:-$CHAOS_ASSETS/kubeconfig}"
 ARCH="$(uname -m)"
 case "$ARCH" in
   x86_64|amd64) PODMAN_PLATFORM="linux/amd64" ;;
-  aarch64|arm64) PODMAN_PLATFORM="linux/amd64" ;;
+  aarch64|arm64) PODMAN_PLATFORM="linux/arm64" ;;
   *) PODMAN_PLATFORM="linux/amd64" ;;
 esac
 
