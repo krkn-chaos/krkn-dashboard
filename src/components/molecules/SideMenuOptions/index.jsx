@@ -43,11 +43,14 @@ const MenuOptions = () => {
   };
 
   useEffect(() => {
-    if (pathname !== "/") {
-      const currPath = pathname.replace(/^.*[/]([^/]+)[/]*$/, "$1");
-
-      dispatch(setActiveItem(currPath));
+    const normalized = (pathname || "/").replace(/\/+$/, "") || "/";
+    /* Index route is Run Kraken (Overview); pathname "/" must not leave sidebar on Past Runs */
+    if (normalized === "/" || normalized === "") {
+      dispatch(setActiveItem("overview"));
+      return;
     }
+    const currPath = pathname.replace(/^.*[/]([^/]+)[/]*$/, "$1");
+    dispatch(setActiveItem(currPath));
   }, [dispatch, pathname]);
   return (
     <>

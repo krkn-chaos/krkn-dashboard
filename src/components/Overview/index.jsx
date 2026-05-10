@@ -65,7 +65,11 @@ const Overview = () => {
     <div className="overview-wrapper">
       <Card className="overview-card">
         <CardBody>
-          <Title headingLevel="h2" className="title-text pf-v5-u-mb-md">
+          <Title
+            headingLevel="h1"
+            size="3xl"
+            className="title-text overview__page-title pf-v5-u-mb-md"
+          >
             Run Kraken
           </Title>
           <div className="top-bar">

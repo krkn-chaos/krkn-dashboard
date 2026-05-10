@@ -15,6 +15,7 @@ import {
   Text,
   TextContent,
   TextVariants,
+  Title,
 } from "@patternfly/react-core";
 import React, { useState } from "react";
 
@@ -51,8 +52,14 @@ const Analysis = () => {
   if (!connectionInfo.isConnected) {
     return (
       <Card>
-        <CardTitle>Connect to elastic search</CardTitle>
         <CardBody>
+          <Title
+            headingLevel="h1"
+            size="3xl"
+            className="analysis__page-title"
+          >
+            Connect to Elastic Search
+          </Title>
           <ESConnectForm />
         </CardBody>
       </Card>

@@ -33,6 +33,8 @@ export const startKraken = (data) => async (dispatch, getState) => {
       dispatch(getPodDetails());
       dispatch(saveConfig());
       dispatch(showToast("success", "Kraken started successfully!"));
+      dispatch({ type: TYPES.COMPLETED });
+      return true;
     } else {
       dispatch(showToast("danger", response.data.message));
     }
@@ -50,6 +52,7 @@ export const startKraken = (data) => async (dispatch, getState) => {
     }
   }
   dispatch({ type: TYPES.COMPLETED });
+  return false;
 };
 
 export const removePod = () => async (dispatch) => {
