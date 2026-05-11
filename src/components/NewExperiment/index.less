@@ -11,3 +11,32 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+/* Replay banner: run link on first line, hint flush underneath (no vertical gap) */
+.new-experiment__replay-alert-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: flex-start;
+}
+
+.new-experiment__replay-alert-run-line {
+  margin: 0;
+  padding: 0;
+  line-height: 1.25;
+}
+
+.new-experiment__replay-alert-run-link.pf-v5-c-button.pf-m-link {
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: inherit;
+}
+
+.new-experiment__replay-alert-hint {
+  display: block;
+  margin: 0;
+  padding: 0;
+  line-height: 1.25;
+  color: var(--pf-v5-global--Color--200);
+}

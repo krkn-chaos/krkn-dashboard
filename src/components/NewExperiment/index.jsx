@@ -2,6 +2,9 @@ import "./index.less";
 
 import {
   ActionGroup,
+  Alert,
+  AlertActionCloseButton,
+  Button,
   Card,
   CardBody,
   Form,
@@ -11,16 +14,42 @@ import {
   TextInput,
   Title,
 } from "@patternfly/react-core";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import KubeconfigFileUpload from "@/components/molecules/FileUpload";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
+import API from "@/utils/axiosInstance";
+import { extractReplayBaseStem } from "@/utils/replayNaming";
 import { paramsList } from "./experimentFormData";
-import { startKraken } from "@/actions/newExperiment";
+import { showToast } from "@/actions/toastActions";
+import { startKraken, updateScenarioChecked } from "@/actions/newExperiment";
+
+const mergeReplayScenarioFields = (stored, baseBlock) => {
+  const next = { ...baseBlock };
+  const skip = new Set(["replayOfContainerId", "isFileUpload", "name"]);
+  for (const [k, v] of Object.entries(stored)) {
+    if (skip.has(k)) continue;
+    if (
+      Object.prototype.hasOwnProperty.call(next, k) &&
+      v !== undefined &&
+      v !== null
+    ) {
+      next[k] = v;
+    }
+  }
+  next.scenarioChecked = stored.scenarioChecked;
+  return next;
+};
 
 const NewExperiment = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const replayAppliedRef = useRef(false);
+  const [replaySourceRunId, setReplaySourceRunId] = useState(null);
+  const [replaySourceDisplayName, setReplaySourceDisplayName] = useState("");
   const [isBtnDisabled, setIsBtnDisabled] = useState(true);
   const scenarioChecked = useSelector(
     (state) => state.experiment.scenarioChecked
@@ -112,6 +141,59 @@ const NewExperiment = () => {
   });
 
   useEffect(() => {
+    if (replayAppliedRef.current) return;
+    const replay = location.state?.replay;
+    if (!replay?.params || !replay?.sourceContainerId) return;
+    const stored = replay.params;
+    const scenario = stored.scenarioChecked;
+    if (!scenario || !paramsList[scenario]) {
+      replayAppliedRef.current = true;
+      navigate(location.pathname, { replace: true, state: {} });
+      return;
+    }
+
+    replayAppliedRef.current = true;
+    const stem = extractReplayBaseStem(stored.name);
+    (async () => {
+      try {
+        const { data } = await API.post("/past-runs/allocate-replay-name", {
+          baseStem: stem,
+        });
+        const allocatedName = data?.name;
+        if (!allocatedName) throw new Error("No name returned");
+        setData((prev) => ({
+          ...prev,
+          [scenario]: {
+            ...mergeReplayScenarioFields(stored, prev[scenario]),
+            name: allocatedName,
+            scenarioChecked: scenario,
+          },
+        }));
+        dispatch(updateScenarioChecked(scenario));
+        setReplaySourceRunId(replay.sourceContainerId);
+        setReplaySourceDisplayName(
+          replay.sourceDisplayName != null && replay.sourceDisplayName !== ""
+            ? replay.sourceDisplayName
+            : stem
+        );
+      } catch (err) {
+        replayAppliedRef.current = false;
+        dispatch(
+          showToast(
+            "danger",
+            "Could not prepare replay",
+            err?.response?.data?.error ||
+              err?.message ||
+              "Unable to allocate a unique replay name."
+          )
+        );
+      } finally {
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    })();
+  }, [location.state, location.pathname, navigate, dispatch]);
+
+  useEffect(() => {
     const scenarioData = data[scenarioChecked];
     const scenarioParams = paramsList[scenarioChecked];
 
@@ -134,17 +216,25 @@ const NewExperiment = () => {
   }, [data, scenarioChecked]);
 
   const changeHandler = (_event, value, key) => {
-    setData((prevSatate) => ({
-      ...data,
+    setData((prevState) => ({
+      ...prevState,
       [scenarioChecked]: {
-        ...prevSatate[scenarioChecked],
+        ...prevState[scenarioChecked],
         [key]: value,
       },
     }));
   };
 
   const sendData = async () => {
-    await dispatch(startKraken(data[scenarioChecked]));
+    const base = { ...data[scenarioChecked] };
+    const payload = replaySourceRunId
+      ? { ...base, replayOfContainerId: replaySourceRunId }
+      : base;
+    const ok = await dispatch(startKraken(payload));
+    if (ok) {
+      setReplaySourceRunId(null);
+      setReplaySourceDisplayName("");
+    }
   };
 
   return (
@@ -163,6 +253,50 @@ const NewExperiment = () => {
           </div>*/}
 
           <Grid hasGutter>
+            {replaySourceRunId ? (
+              <GridItem span={12}>
+                <Alert
+                  isInline
+                  variant="info"
+                  title="Replayed from"
+                  actionClose={
+                    <AlertActionCloseButton
+                      onClose={() => {
+                        setReplaySourceRunId(null);
+                        setReplaySourceDisplayName("");
+                      }}
+                    />
+                  }
+                >
+                  <div className="new-experiment__replay-alert-desc">
+                    <div className="new-experiment__replay-alert-run-line">
+                      <Button
+                        variant="link"
+                        isInline
+                        className="new-experiment__replay-alert-run-link pf-v5-u-pl-0"
+                        component="a"
+                        href="/past-runs"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate("/past-runs", {
+                            state: {
+                              focusContainerId: replaySourceRunId,
+                            },
+                          });
+                        }}
+                      >
+                        {replaySourceDisplayName || "Original"} —{" "}
+                        {replaySourceRunId}
+                      </Button>
+                    </div>
+                    <span className="new-experiment__replay-alert-hint">
+                      Adjust parameters below or upload another kubeconfig file to
+                      target a different cluster.
+                    </span>
+                  </div>
+                </Alert>
+              </GridItem>
+            ) : null}
             <GridItem span={12}>
               <Grid hasGutter>
                 <GridItem span={6}>

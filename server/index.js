@@ -2,10 +2,13 @@
 import * as path from "path";
 
 import {
+  allocateUniqueReplayDisplayName,
   deleteConfig,
   getConfig,
+  getDetailsByContainerId,
   getDetailsForAnalytics,
   getResults,
+  resolveReplayRootContainerId,
   saveConfig,
   savePodDetails,
 } from "./db.js";
@@ -16,10 +19,15 @@ import {
   fetchSummaryFromOpenSearch,
 } from "./opensearch/index.js";
 import {
+  buildRunGroupsFromRows,
   computeStats,
+  enrichRunRow,
   filterByNameRegex,
   filterRowsByOutcome,
+  filterRowsByRunKind,
+  findGroupIndexForContainerId,
   rowOutcome,
+  sortRunGroups,
 } from "./pastRuns.js";
 
 import { fetchGrafanaDashboardList } from "./grafanaDashboardIndex.js";
@@ -72,8 +80,6 @@ function resolveKubeconfigPathForRequest(isFileUpload) {
   return getUploadKubeconfigPath();
 }
 
-let myInterval;
-
 chmodr(uploadFilePath, 0o777, (err) => {
   if (err) {
     console.log("Failed to execute chmod", err);
@@ -98,6 +104,62 @@ function getPodmanRunPlatformPrefix() {
   return "--platform linux/amd64 ";
 }
 const PODMAN_RUN_PLATFORM_PREFIX = getPodmanRunPlatformPrefix();
+
+/** Podman container name -> metadata persisted when the run completes */
+const pendingRunMetadata = new Map();
+
+/** normalized pod display name -> interval handle (each run polls independently) */
+const runPollIntervalsByPodName = new Map();
+/** normalized names we already persisted after exit (avoid duplicate INSERT OR REPLACE wiping meta) */
+const persistedExitByPodName = new Set();
+
+function normalizePodLookupKey(podName) {
+  return String(podName || "").trim().replace(/^\//, "");
+}
+
+/** Podman `run -d` prints full container id on stdout (first line). */
+function extractPodmanRunContainerId(stdout) {
+  const line = String(stdout || "")
+    .trim()
+    .split(/\r?\n/)
+    .find((l) => l.trim());
+  if (!line) return null;
+  const s = line.trim().replace(/^sha256:/i, "");
+  if (/^[a-f0-9]{64}$/i.test(s)) return s.toLowerCase();
+  if (/^[a-f0-9]{12,63}$/i.test(s)) return s.toLowerCase();
+  return null;
+}
+
+/**
+ * Try keys in order; remove every map entry pointing at the same meta object (name + container id aliases).
+ */
+function takePendingRunMetadata(...lookupKeys) {
+  let meta = null;
+  for (const raw of lookupKeys) {
+    if (raw == null || raw === undefined) continue;
+    const s = String(raw).trim();
+    if (!s) continue;
+    const variants = [
+      s,
+      s.replace(/^\//, ""),
+      s.length >= 12 ? s.slice(0, 12) : null,
+    ].filter(Boolean);
+    for (const k of variants) {
+      const m = pendingRunMetadata.get(k);
+      if (m) {
+        meta = m;
+        break;
+      }
+    }
+    if (meta) break;
+  }
+  if (meta) {
+    for (const [k, v] of [...pendingRunMetadata.entries()]) {
+      if (v === meta) pendingRunMetadata.delete(k);
+    }
+  }
+  return meta;
+}
 
 // Validates the podman socket before starting a container instance
 if (
@@ -128,9 +190,27 @@ if (
   }
 }
 
-app.post("/start-kraken/", (req, res) => {
+app.post("/start-kraken/", async (req, res) => {
   const scenario = req.body.params.scenarioChecked;
   const isFileUpload = Boolean(req.body.params?.isFileUpload);
+
+  let replayResolvedId = null;
+  const rawReplay = req.body.params?.replayOfContainerId;
+  if (rawReplay && String(rawReplay).trim()) {
+    try {
+      replayResolvedId = await resolveReplayRootContainerId(
+        String(rawReplay).trim()
+      );
+    } catch (e) {
+      console.warn("[start-kraken] resolveReplayRoot:", e?.message);
+      replayResolvedId = String(rawReplay).trim();
+    }
+  }
+
+  const paramsForMeta = {
+    ...req.body.params,
+    ...(replayResolvedId ? { replayOfContainerId: replayResolvedId } : {}),
+  };
 
   const kubeConfigFileLocation = resolveKubeconfigPathForRequest(isFileUpload);
   if (!fs.existsSync(kubeConfigFileLocation)) {
@@ -178,12 +258,47 @@ app.post("/start-kraken/", (req, res) => {
   // hit ERR_CHILD_PROCESS_STDIO_MAXBUFFER.
   child_process.exec(command, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
     if (!err) {
+      const params = paramsForMeta || {};
+      const replayOf = params.replayOfContainerId;
+      const runKind =
+        replayOf && String(replayOf).trim() ? "replay" : "original";
+      const nameKey = normalizePodLookupKey(params.name);
+      try {
+        const metaObj = {
+          scenario_params: JSON.stringify(params),
+          replay_of_container_id:
+            replayOf && String(replayOf).trim() ? String(replayOf).trim() : null,
+          run_kind: runKind,
+        };
+        pendingRunMetadata.set(nameKey, metaObj);
+        const runCid = extractPodmanRunContainerId(stdout);
+        if (runCid) {
+          pendingRunMetadata.set(runCid, metaObj);
+          if (runCid.length >= 12) {
+            pendingRunMetadata.set(runCid.slice(0, 12), metaObj);
+          }
+        }
+        persistedExitByPodName.delete(nameKey);
+      } catch (e) {
+        console.warn("[start-kraken] pendingRunMetadata:", e?.message);
+      }
       res.status(200).json({
         message: "Successfully created the container!",
         name: req.body.params.name,
         status: "200",
       });
-      myInterval = setInterval(() => myFunc(req.body.params.name), 1000 * 9);
+      {
+        const prevT = runPollIntervalsByPodName.get(nameKey);
+        if (prevT) {
+          clearInterval(prevT);
+          runPollIntervalsByPodName.delete(nameKey);
+        }
+        const pollT = setInterval(
+          () => myFunc(req.body.params.name),
+          1000 * 9
+        );
+        runPollIntervalsByPodName.set(nameKey, pollT);
+      }
       if (stderr) {
         console.log("[start-kraken] podman stderr (informational):", stripAnsi(stderr).slice(0, 2000));
       }
@@ -318,7 +433,42 @@ app.get("/getResults", async (req, res) => {
   }
 });
 
-/** Local DB past runs: filters (dates, image, name regex) + optional outcome table slice. */
+app.post("/past-runs/allocate-replay-name", async (req, res) => {
+  try {
+    const stem = req.body?.baseStem ?? req.body?.stem;
+    if (stem == null || String(stem).trim() === "") {
+      return res.status(400).json({ error: "baseStem is required" });
+    }
+    const name = await allocateUniqueReplayDisplayName(String(stem));
+    return res.json({ name });
+  } catch (err) {
+    console.error("allocate-replay-name:", err);
+    return res
+      .status(500)
+      .json({ error: err?.message || "Failed to allocate name" });
+  }
+});
+
+app.get("/past-runs/:containerId", async (req, res) => {
+  try {
+    const id = req.params.containerId;
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ error: "Invalid container id" });
+    }
+    const row = await getDetailsByContainerId(id);
+    if (!row) {
+      return res.status(404).json({ error: "Run not found" });
+    }
+    return res.json({ run: enrichRunRow(row) });
+  } catch (err) {
+    console.error("past-runs get:", err);
+    return res
+      .status(500)
+      .json({ error: err?.message || "Failed to load run" });
+  }
+});
+
+/** Local DB past runs: filters + grouped originals/replays + sort + pagination by group */
 app.post("/past-runs", async (req, res) => {
   try {
     const {
@@ -327,6 +477,10 @@ app.post("/past-runs", async (req, res) => {
       startDate = "",
       endDate = "",
       outcome = "all",
+      runKind = "all",
+      sortBy = "finishedAt",
+      sortDir = "desc",
+      focusContainerId = "",
       page = 1,
       perPage = 25,
     } = req.body || {};
@@ -342,25 +496,47 @@ app.post("/past-runs", async (req, res) => {
         .json({ error: `Invalid name regex: ${nameFilter.error}` });
     }
     rows = nameFilter.rows;
+    rows = filterRowsByRunKind(rows, runKind);
     const stats = computeStats(rows);
     const tableRows = filterRowsByOutcome(rows, outcome).map((r) => ({
-      ...r,
+      ...enrichRunRow(r),
       outcome: rowOutcome(r),
     }));
+    const safeSortBy =
+      sortBy === "name" || sortBy === "finishedAt" ? sortBy : "finishedAt";
+    const safeSortDir =
+      sortDir === "asc" || sortDir === "desc" ? sortDir : "desc";
+
+    let sortedGroups = sortRunGroups(
+      buildRunGroupsFromRows(tableRows, runKind),
+      safeSortBy,
+      safeSortDir
+    );
+
     const safePerPage = Math.min(
       25,
       Math.max(1, parseInt(String(perPage), 10) || 25)
     );
-    const safePage = Math.max(1, parseInt(String(page), 10) || 1);
-    const itemCount = tableRows.length;
+    let normalizedPage = Math.max(1, parseInt(String(page), 10) || 1);
+
+    const focusId =
+      typeof focusContainerId === "string" ? focusContainerId.trim() : "";
+    if (focusId) {
+      const fi = findGroupIndexForContainerId(sortedGroups, focusId);
+      if (fi >= 0) {
+        normalizedPage = Math.floor(fi / safePerPage) + 1;
+      }
+    }
+
+    const itemCount = sortedGroups.length;
     const totalPages = Math.max(1, Math.ceil(itemCount / safePerPage));
-    const normalizedPage = Math.min(safePage, totalPages);
+    normalizedPage = Math.min(normalizedPage, totalPages);
     const start = (normalizedPage - 1) * safePerPage;
-    const end = start + safePerPage;
-    const pagedRows = tableRows.slice(start, end);
+    const pagedGroups = sortedGroups.slice(start, start + safePerPage);
+
     return res.json({
       stats,
-      runs: pagedRows,
+      groups: pagedGroups,
       pagination: {
         page: normalizedPage,
         perPage: safePerPage,
@@ -373,6 +549,9 @@ app.post("/past-runs", async (req, res) => {
         startDate,
         endDate,
         outcome,
+        runKind,
+        sortBy: safeSortBy,
+        sortDir: safeSortDir,
       },
     });
   } catch (err) {
@@ -404,10 +583,16 @@ const persistCompletedRun = (podName) => {
 };
 
 const frame = async (status, podName) => {
-  if (status === "exited") {
-    clearInterval(myInterval);
-    persistCompletedRun(podName);
+  if (status !== "exited") return;
+  const pk = normalizePodLookupKey(podName);
+  const tid = runPollIntervalsByPodName.get(pk);
+  if (tid) {
+    clearInterval(tid);
+    runPollIntervalsByPodName.delete(pk);
   }
+  if (persistedExitByPodName.has(pk)) return;
+  persistedExitByPodName.add(pk);
+  persistCompletedRun(podName);
 };
 const myFunc = (podName) => {
   const command = `${PODMAN} inspect ${podName} --format "{{.State.Status}}"`;
@@ -443,6 +628,16 @@ const savePodDetailsToFile = async (podName, fileContent) => {
             : Array.isArray(row?.Names)
               ? row.Names[0]
               : podName;
+        const cidFromInspect = String(row.Id || "")
+          .replace(/^sha256:/i, "")
+          .trim()
+          .toLowerCase();
+        const meta = takePendingRunMetadata(
+          cidFromInspect,
+          cidFromInspect.length >= 12 ? cidFromInspect.slice(0, 12) : null,
+          podName,
+          displayName
+        );
         await savePodDetails(
           row.Id,
           row.ImageName || row.Image || "",
@@ -450,7 +645,8 @@ const savePodDetailsToFile = async (podName, fileContent) => {
           row.State?.Status ?? "",
           String(row.State?.ExitCode ?? ""),
           displayName,
-          fileContent
+          fileContent,
+          meta || {}
         );
       } catch (error) {
         console.log("Error saving pod details:", error);

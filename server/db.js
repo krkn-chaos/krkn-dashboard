@@ -1,6 +1,7 @@
 import * as path from "path";
 import fs from "fs";
 
+import { extractReplayBaseStem, formatReplayTimestampSuffix } from "./pastRuns.js";
 import { fileURLToPath } from "url";
 import sqlite3 from "sqlite3";
 
@@ -64,6 +65,24 @@ db.exec(`CREATE TABLE IF NOT EXISTS details (
 db.run("ALTER TABLE details ADD COLUMN stored_at TEXT", (e) => {
   if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
     console.warn("[db] ALTER TABLE details ADD COLUMN stored_at:", e?.message);
+  }
+});
+
+db.run("ALTER TABLE details ADD COLUMN scenario_params TEXT", (e) => {
+  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+    console.warn("[db] ALTER TABLE details ADD COLUMN scenario_params:", e?.message);
+  }
+});
+
+db.run("ALTER TABLE details ADD COLUMN replay_of_container_id TEXT", (e) => {
+  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+    console.warn("[db] ALTER TABLE details ADD COLUMN replay_of_container_id:", e?.message);
+  }
+});
+
+db.run("ALTER TABLE details ADD COLUMN run_kind TEXT DEFAULT 'original'", (e) => {
+  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+    console.warn("[db] ALTER TABLE details ADD COLUMN run_kind:", e?.message);
   }
 });
 
@@ -176,14 +195,43 @@ export const deleteConfig = (id) => {
   });
 };
 
-export const savePodDetails = (containerId, image, mounts, state, status, name, content) => {
+/**
+ * @param {{ scenario_params?: string | null, replay_of_container_id?: string | null, run_kind?: string | null }} [meta]
+ */
+export const savePodDetails = (
+  containerId,
+  image,
+  mounts,
+  state,
+  status,
+  name,
+  content,
+  meta = {}
+) => {
+  const {
+    scenario_params = null,
+    replay_of_container_id = null,
+    run_kind = null,
+  } = meta;
   return new Promise((resolve, reject) => {
     const sql = `INSERT OR REPLACE INTO details(
-      container_id, image, mounts, state, status, name, content, stored_at
-    ) VALUES (?,?,?,?,?,?,?, datetime('now'))`;
+      container_id, image, mounts, state, status, name, content, stored_at,
+      scenario_params, replay_of_container_id, run_kind
+    ) VALUES (?,?,?,?,?,?,?, datetime('now'),?,?,?)`;
     db.run(
       sql,
-      [containerId, image, mounts, state, status, name, content],
+      [
+        containerId,
+        image,
+        mounts,
+        state,
+        status,
+        name,
+        content,
+        scenario_params,
+        replay_of_container_id,
+        run_kind,
+      ],
       function(err) {
         if (err) {
           console.log(err);
@@ -196,3 +244,60 @@ export const savePodDetails = (containerId, image, mounts, state, status, name, 
     );
   });
 };
+
+export const getDetailsByContainerId = (containerId) => {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM details WHERE container_id = ? LIMIT 1`;
+    db.get(sql, [containerId], (err, row) => {
+      if (err) {
+        reject({
+          status: 300,
+          message: "error getting details by container id",
+          error: err,
+        });
+      } else {
+        resolve(row || null);
+      }
+    });
+  });
+};
+
+/** Compare display names with optional leading slash from Podman */
+export const isStoredRunNameTaken = (bareName) => {
+  const normalized = String(bareName ?? "").trim().replace(/^\//, "");
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT 1 AS ok FROM details WHERE TRIM(REPLACE(name, '/', '')) = ? LIMIT 1`;
+    db.get(sql, [normalized], (err, row) => {
+      if (err) reject(err);
+      else resolve(Boolean(row?.ok));
+    });
+  });
+};
+
+export async function allocateUniqueReplayDisplayName(rawStem) {
+  const stem = extractReplayBaseStem(rawStem);
+  const ts = formatReplayTimestampSuffix();
+  let candidate = `${stem}-replay-${ts}`;
+  if (!(await isStoredRunNameTaken(candidate))) return candidate;
+  let n = 2;
+  while (n < 100000) {
+    const c = `${stem}-replay-${ts}-${n}`;
+    if (!(await isStoredRunNameTaken(c))) return c;
+    n += 1;
+  }
+  throw new Error("Could not allocate unique replay name");
+}
+
+/** Walk replay chain to the root original run container id */
+export async function resolveReplayRootContainerId(containerId) {
+  let id = String(containerId ?? "").trim();
+  const seen = new Set();
+  for (let i = 0; i < 100; i++) {
+    if (!id || seen.has(id)) break;
+    seen.add(id);
+    const row = await getDetailsByContainerId(id);
+    if (!row?.replay_of_container_id) return id;
+    id = String(row.replay_of_container_id).trim();
+  }
+  return String(containerId ?? "").trim();
+}
