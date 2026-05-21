@@ -12,6 +12,7 @@ import {
   saveConfig,
   savePodDetails,
 } from "./db.js";
+import { mountExportRoutes } from "./exportRoutes.js";
 import {
   ElasticRunListService,
   fetchAlertsFromOpenSearch,
@@ -50,6 +51,8 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+mountExportRoutes(app, { getDetailsByContainerId, getDetailsForAnalytics });
 
 /* Set path to upload config file */
 const uploadFilePath = path.resolve(__dirname, "../", "src/assets");

@@ -36,7 +36,11 @@ import React, {
   useState,
 } from "react";
 
-import { downloadLogs } from "@/actions/newExperiment";
+import {
+  downloadHistoryExport,
+  downloadLogs,
+  downloadRunExport,
+} from "@/actions/newExperiment";
 import { showToast } from "@/actions/toastActions";
 import API from "@/utils/axiosInstance";
 import { useDispatch } from "react-redux";
@@ -377,9 +381,61 @@ const PastRuns = () => {
         <Title headingLevel="h1" size="3xl" className="past-runs__page-title">
           Past runs
         </Title>
-        <Button variant="secondary" onClick={load} isDisabled={loading}>
-          Refresh
-        </Button>
+        <div className="past-runs__export-actions">
+          <Button
+            variant="link"
+            icon={<DownloadIcon />}
+            iconPosition="end"
+            isDisabled={loading}
+            onClick={() =>
+              dispatch(
+                downloadHistoryExport(
+                  {
+                    nameRegex: applied.nameRegex,
+                    imageContains: applied.imageContains,
+                    startDate: applied.startDate,
+                    endDate: applied.endDate,
+                    outcome,
+                    runKind,
+                    sortBy,
+                    sortDir,
+                  },
+                  "json"
+                )
+              )
+            }
+          >
+            Export history JSON
+          </Button>
+          <Button
+            variant="link"
+            icon={<DownloadIcon />}
+            iconPosition="end"
+            isDisabled={loading}
+            onClick={() =>
+              dispatch(
+                downloadHistoryExport(
+                  {
+                    nameRegex: applied.nameRegex,
+                    imageContains: applied.imageContains,
+                    startDate: applied.startDate,
+                    endDate: applied.endDate,
+                    outcome,
+                    runKind,
+                    sortBy,
+                    sortDir,
+                  },
+                  "html"
+                )
+              )
+            }
+          >
+            Export history HTML
+          </Button>
+          <Button variant="secondary" onClick={load} isDisabled={loading}>
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="past-runs__body-rail">
@@ -684,6 +740,38 @@ const PastRuns = () => {
                   }
                 >
                   Replay
+                </Button>
+                <Button
+                  variant="link"
+                  icon={<DownloadIcon />}
+                  iconPosition="end"
+                  onClick={() =>
+                    dispatch(
+                      downloadRunExport(
+                        detailRow.container_id,
+                        displayName(detailRow),
+                        "json"
+                      )
+                    )
+                  }
+                >
+                  Download JSON
+                </Button>
+                <Button
+                  variant="link"
+                  icon={<DownloadIcon />}
+                  iconPosition="end"
+                  onClick={() =>
+                    dispatch(
+                      downloadRunExport(
+                        detailRow.container_id,
+                        displayName(detailRow),
+                        "html"
+                      )
+                    )
+                  }
+                >
+                  Download HTML
                 </Button>
                 <Button
                   variant="link"
