@@ -78,6 +78,8 @@ app.use(requireAuth);
 
 mountExportRoutes(app, { getDetailsByContainerId, getDetailsForAnalytics });
 
+mountExportRoutes(app, { getDetailsByContainerId, getDetailsForAnalytics });
+
 /* Set path to upload config file */
 const uploadFilePath = path.resolve(__dirname, "../", "src/assets");
 
