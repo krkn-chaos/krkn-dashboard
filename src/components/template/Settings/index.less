@@ -1,0 +1,120 @@
+.settings-page {
+  &__title {
+    margin-bottom: 1rem;
+  }
+
+  &__account {
+    margin-bottom: 2rem;
+  }
+
+  &__account-alert {
+    margin-bottom: 1rem;
+  }
+
+  &__rules-list {
+    margin: 0;
+    padding-left: 1.25rem;
+  }
+
+  &__label-with-help {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  &__help-btn {
+    padding: 0;
+    min-height: auto;
+  }
+
+  /* Space between tab row, divider, and tab panel — not between form fields */
+  &__tabs.pf-v5-c-tabs {
+    .pf-v5-c-tabs__list {
+      margin-bottom: 0.75rem;
+    }
+
+    [role="tabpanel"] {
+      padding-top: 1rem;
+    }
+  }
+
+  .settings-form {
+    max-width: 32rem;
+    margin-bottom: 1.5rem;
+  }
+
+  &__group-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  &__group-memberships {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__group-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+
+    li {
+      margin-bottom: 0.35rem;
+    }
+  }
+
+  &__group-membership-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+
+    .pf-v5-c-form-control {
+      min-width: 10rem;
+    }
+  }
+
+  &__hint {
+    color: var(--pf-v5-global--Color--200);
+    margin-top: 0.5rem;
+  }
+
+  &__clickable-row {
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--pf-v5-global--BackgroundColor--200);
+    }
+  }
+
+  &__back {
+    padding-left: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  &__section-title {
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__group-alert {
+    margin: 1rem 0;
+  }
+
+  &__modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .settings-form--inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+}

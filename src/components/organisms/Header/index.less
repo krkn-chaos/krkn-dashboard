@@ -1,4 +1,43 @@
+.dashboard-masthead.pf-v5-c-masthead {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: 100%;
+
+  .pf-v5-c-masthead__main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .pf-v5-c-masthead__content {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+}
+
 .header-logo {
   width: 60px;
   height: 60px;
+}
+
+.header-toolbar {
+  background: transparent;
+}
+
+.header-user-icon {
+  color: var(--pf-v5-global--Color--100);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--pf-v5-global--primary-color--100);
+  }
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+.header-sign-out {
+  white-space: nowrap;
 }
