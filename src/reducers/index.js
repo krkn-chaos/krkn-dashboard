@@ -6,8 +6,10 @@ import SummaryReducer from "./summaryReducer";
 import ToastReducer from "./toastReducer";
 import { combineReducers } from "redux";
 import experimentReducer from "./experimentReducer";
+import authReducer from "./authReducer";
 
 export default combineReducers({
+  auth: authReducer,
   experiment: experimentReducer,
   loading: LoadingReducer,
   toastReducer: ToastReducer,
