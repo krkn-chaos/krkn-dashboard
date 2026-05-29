@@ -8,6 +8,7 @@ import {
   MemoryIcon,
   MicrochipIcon,
   OutlinedClockIcon,
+  VirtualMachineIcon,
 } from "@patternfly/react-icons";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -64,6 +65,13 @@ const scenariosOptions = [
     label: "Time Scenarios",
     icon: OutlinedClockIcon,
     isImg: false,
+  },
+  {
+    id: 9,
+    key: "kubevirt-outage",
+    label: "KubeVirt VM Outage",
+    isImg: false,
+    icon: VirtualMachineIcon,
   },
 ];
 

@@ -145,6 +145,15 @@ const NewExperiment = () => {
       name: "",
       scenarioChecked: "time-scenarios",
     },
+    "kubevirt-outage": {
+      kubeconfigPath: "",
+      namespace: "default",
+      vm_name: "",
+      timeout: 60,
+      kill_count: 1,
+      name: "",
+      scenarioChecked: "kubevirt-outage",
+    },
   });
 
   useEffect(() => {
