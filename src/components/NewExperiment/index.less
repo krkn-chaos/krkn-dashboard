@@ -40,3 +40,25 @@
   line-height: 1.25;
   color: var(--pf-v5-global--Color--200);
 }
+
+/* Staggered entrance for the scenario parameter fields when a scenario is picked */
+.new-experiment__field-enter {
+  animation: new-experiment-field-enter 0.32s ease both;
+}
+
+@keyframes new-experiment-field-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .new-experiment__field-enter {
+    animation: none;
+  }
+}
