@@ -249,6 +249,9 @@ app.post("/start-kraken/", async (req, res) => {
     case "time-scenarios":
       command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
       break;
+    case "zone-outages":
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env CLOUD_TYPE=${req.body.params.cloud_type} --env DURATION=${req.body.params.duration} --env VPC_ID=${req.body.params.vpc_id} --env SUBNET_ID=${req.body.params.subnet_id} --env ZONE=${req.body.params.zone} --env DEFAULT_ACL_ID=${req.body.params.default_acl_id} --env-host --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:zone-outages`;
+      break;
     default:
       command = `echo 'No scenario selected'`;
   }
