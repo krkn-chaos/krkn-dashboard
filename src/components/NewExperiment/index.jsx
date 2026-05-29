@@ -152,6 +152,17 @@ const NewExperiment = () => {
       name: "",
       scenarioChecked: "time-scenarios",
     },
+    "zone-outages": {
+      kubeconfigPath: "",
+      cloud_type: "aws",
+      duration: 600,
+      vpc_id: "",
+      subnet_id: "",
+      zone: "",
+      default_acl_id: "",
+      name: "",
+      scenarioChecked: "zone-outages",
+    },
   });
 
   useEffect(() => {

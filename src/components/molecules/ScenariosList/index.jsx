@@ -5,6 +5,7 @@ import {
   ContainerNodeIcon,
   CubeIcon,
   DatabaseIcon,
+  DisconnectedIcon,
   MemoryIcon,
   MicrochipIcon,
   OutlinedClockIcon,
@@ -64,6 +65,13 @@ const scenariosOptions = [
     label: "Time Scenarios",
     icon: OutlinedClockIcon,
     isImg: false,
+  },
+  {
+    id: 9,
+    key: "zone-outages",
+    label: "Zone Outages",
+    isImg: false,
+    icon: DisconnectedIcon,
   },
 ];
 
