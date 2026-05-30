@@ -86,6 +86,13 @@ db.run("ALTER TABLE details ADD COLUMN run_kind TEXT DEFAULT 'original'", (e) =>
   }
 });
 
+// Normalized resiliency score (JSON) parsed from captured run logs
+db.run("ALTER TABLE details ADD COLUMN resiliency_report TEXT", (e) => {
+  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+    console.warn("[db] ALTER TABLE details ADD COLUMN resiliency_report:", e?.message);
+  }
+});
+
 // Database functions
 export const saveConfig = (name, params) => {
   return new Promise((resolve, reject) => {
@@ -212,12 +219,13 @@ export const savePodDetails = (
     scenario_params = null,
     replay_of_container_id = null,
     run_kind = null,
+    resiliency_report = null,
   } = meta;
   return new Promise((resolve, reject) => {
     const sql = `INSERT OR REPLACE INTO details(
       container_id, image, mounts, state, status, name, content, stored_at,
-      scenario_params, replay_of_container_id, run_kind
-    ) VALUES (?,?,?,?,?,?,?, datetime('now'),?,?,?)`;
+      scenario_params, replay_of_container_id, run_kind, resiliency_report
+    ) VALUES (?,?,?,?,?,?,?, datetime('now'),?,?,?,?)`;
     db.run(
       sql,
       [
@@ -231,6 +239,7 @@ export const savePodDetails = (
         scenario_params,
         replay_of_container_id,
         run_kind,
+        resiliency_report,
       ],
       function(err) {
         if (err) {

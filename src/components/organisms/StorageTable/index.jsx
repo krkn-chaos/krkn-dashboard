@@ -16,6 +16,7 @@ import ConfigRow from "@/components/molecules/ConfigRow";
 import GraphRow from "@/components/molecules/GraphRow";
 import GrafanaLink from "@/components/atoms/GrafanaLink";
 import RenderPagination from "../RenderPagination";
+import ResiliencyScore from "@/components/molecules/ResiliencyScore";
 import StatusCell from "@/components/atoms/StatusCell";
 import StorageTableFilter from "@/components/molecules/StorageTableFilter";
 import { formatDateTime } from "@/utils/helper";
@@ -47,6 +48,7 @@ const StorageTable = () => {
     end_time: "End Time",
     namespace: "Namespace",
     status: "Status",
+    resiliency: "Resiliency",
   };
 
   return (
@@ -92,6 +94,9 @@ const StorageTable = () => {
                   <Td>
                     <StatusCell exit_status={doc.status} />
                   </Td>
+                  <Td>
+                    <ResiliencyScore resiliency={doc.resiliency} variant="compact" />
+                  </Td>
                 </Tr>
                 {doc.config && isRunExpanded(doc) ? (
                   <Tr isExpanded={isRunExpanded(doc)}>
@@ -105,6 +110,16 @@ const StorageTable = () => {
                             <GraphRow doc={doc} />
                           </GridItem>
                         </Grid>
+                        {doc.resiliency ? (
+                          <Grid hasGutter className="pf-v5-u-mt-md">
+                            <GridItem span={12}>
+                              <ResiliencyScore
+                                resiliency={doc.resiliency}
+                                variant="detailed"
+                              />
+                            </GridItem>
+                          </Grid>
+                        ) : null}
                         {connectionInfo?.grafanaBaseUrl ? (() => {
                           const dashboardPath = resolveDashboardPath(
                             doc.scenario_type,
