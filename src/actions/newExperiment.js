@@ -1,9 +1,8 @@
 import * as TYPES from "./types";
 
-import API, { getUrl } from "@/utils/axiosInstance";
+import API from "@/utils/axiosInstance";
 
 import Cookies from "universal-cookie";
-import axios from "axios";
 import { showToast } from "./toastActions";
 
 export const startKraken = (data) => async (dispatch, getState) => {
@@ -11,8 +10,15 @@ export const startKraken = (data) => async (dispatch, getState) => {
     dispatch({ type: TYPES.LOADING });
     // dispatch(removePod());
     const { kubeConfigFile } = getState().experiment;
+    const auth = getState().auth;
     if (kubeConfigFile) {
       data["isFileUpload"] = true;
+    }
+    if (data.kubeconfigId) {
+      data.kubeconfigId = parseInt(data.kubeconfigId, 10);
+    }
+    if (data.groupId == null && auth.activeGroupId) {
+      data.groupId = auth.activeGroupId;
     }
     dispatch({
       type: TYPES.SET_POD_STATUS,
@@ -191,17 +197,24 @@ export const fileUpload = (fileObj) => async (dispatch) => {
     const formData = new FormData();
 
     formData.append("files", fileObj);
-    const url = getUrl();
-    const response = await axios.post(`${url}/uploadFile`, formData, {
+    const response = await API.post("/uploadFile", formData, {
       headers: {
-        "content-type": "multipart/form-data",
+        "Content-Type": "multipart/form-data",
       },
     });
     if (response.data.status === "200") {
       dispatch(showToast("success", "File uploaded successfully", ""));
     }
-  } catch {
-    dispatch(showToast("danger", "Something went wrong", "Try again later"));
+  } catch (error) {
+    dispatch(
+      showToast(
+        "danger",
+        "Something went wrong",
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "Try again later"
+      )
+    );
   }
   dispatch({ type: TYPES.COMPLETED });
 };
@@ -292,3 +305,77 @@ export const downloadLogs = (containerName) => async (dispatch) => {
   }
   dispatch({ type: TYPES.COMPLETED });
 };
+
+function filenameFromHeaders(headers, fallback) {
+  const cd = headers?.["content-disposition"] || headers?.["Content-Disposition"];
+  if (typeof cd === "string") {
+    const m = cd.match(/filename="([^"]+)"/);
+    if (m && m[1]) return m[1];
+  }
+  return fallback;
+}
+
+function triggerBlobDownload(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+export const downloadRunExport =
+  (containerId, runName, format) => async (dispatch) => {
+    try {
+      dispatch({ type: TYPES.LOADING });
+      const response = await API.get(
+        `/past-runs/${encodeURIComponent(containerId)}/export?format=${format}`,
+        { responseType: "blob" }
+      );
+      if (response.status === 200) {
+        const fallback = `${(runName || "run").replace(/[^A-Za-z0-9._-]+/g, "-")}-${String(
+          containerId || ""
+        ).slice(0, 12)}.${format}`;
+        const filename = filenameFromHeaders(response.headers, fallback);
+        triggerBlobDownload(response.data, filename);
+      }
+    } catch (err) {
+      dispatch(
+        showToast(
+          "danger",
+          `Error downloading ${String(format).toUpperCase()}`,
+          "Try again later"
+        )
+      );
+    }
+    dispatch({ type: TYPES.COMPLETED });
+  };
+
+export const downloadHistoryExport =
+  (filters, format) => async (dispatch) => {
+    try {
+      dispatch({ type: TYPES.LOADING });
+      const response = await API.post(
+        `/past-runs/export?format=${format}`,
+        filters || {},
+        { responseType: "blob" }
+      );
+      if (response.status === 200) {
+        const today = new Date().toISOString().slice(0, 10);
+        const fallback = `krkn-runs-history-${today}.${format}`;
+        const filename = filenameFromHeaders(response.headers, fallback);
+        triggerBlobDownload(response.data, filename);
+      }
+    } catch (err) {
+      dispatch(
+        showToast(
+          "danger",
+          `Error downloading history ${String(format).toUpperCase()}`,
+          "Try again later"
+        )
+      );
+    }
+    dispatch({ type: TYPES.COMPLETED });
+  };

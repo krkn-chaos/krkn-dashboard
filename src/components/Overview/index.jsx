@@ -21,6 +21,8 @@ const Overview = () => {
   const { isPodmanInstalled, podDetailsList } = useSelector(
     (state) => state.experiment
   );
+  const userRole = useSelector((state) => state.auth.user?.role);
+  const canRun = userRole === "admin" || userRole === "user";
 
   const runningPods = useMemo(
     () =>
@@ -73,8 +75,17 @@ const Overview = () => {
             Run Kraken
           </Title>
           <div className="top-bar">
-            <ScenariosCard />
-            <NewExperiment />
+            {canRun ? (
+              <>
+                <ScenariosCard />
+                <NewExperiment />
+              </>
+            ) : (
+              <p>
+                View-only access. You can browse past runs but cannot start
+                experiments.
+              </p>
+            )}
           </div>
           <RunningContainersTable pods={runningPods} />
         </CardBody>

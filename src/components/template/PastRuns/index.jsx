@@ -1,3 +1,4 @@
+// Assisted-by: Cursor:Codex5.3
 import "./index.less";
 
 import {
@@ -13,6 +14,8 @@ import {
   EmptyStateBody,
   Form,
   FormGroup,
+  FormSelect,
+  FormSelectOption,
   Label,
   Pagination,
   TextInput,
@@ -36,11 +39,15 @@ import React, {
   useState,
 } from "react";
 
-import { downloadLogs } from "@/actions/newExperiment";
+import {
+  downloadHistoryExport,
+  downloadLogs,
+  downloadRunExport,
+} from "@/actions/newExperiment";
 import { showToast } from "@/actions/toastActions";
 import ResiliencyScore from "@/components/molecules/ResiliencyScore";
 import API from "@/utils/axiosInstance";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const formatFinishedAt = (s) => {
@@ -58,6 +65,7 @@ const emptyApplied = () => ({
   imageContains: "",
   startDate: "",
   endDate: "",
+  groupId: "",
 });
 
 const flattenGroupRows = (groups) => {
@@ -76,11 +84,14 @@ const PastRuns = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const focusOnceRef = useRef(null);
+  const { user } = useSelector((state) => state.auth);
 
   const [nameRegex, setNameRegex] = useState("");
   const [imageContains, setImageContains] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const [filterGroups, setFilterGroups] = useState([]);
   const [applied, setApplied] = useState(emptyApplied);
 
   const [outcome, setOutcome] = useState("all");
@@ -111,6 +122,28 @@ const PastRuns = () => {
   const [selectedFallback, setSelectedFallback] = useState(null);
   const [parentRun, setParentRun] = useState(null);
 
+  useEffect(() => {
+    const loadGroups = async () => {
+      try {
+        const path =
+          user?.role === "admin" ? "/auth/groups" : "/auth/groups/mine";
+        const { data } = await API.get(path);
+        const list = data.groups || [];
+        setFilterGroups(
+          user?.role === "admin"
+            ? list
+            : list.map((g) => ({
+                id: g.id,
+                name: g.name,
+              }))
+        );
+      } catch {
+        setFilterGroups([]);
+      }
+    };
+    if (user) loadGroups();
+  }, [user]);
+
   useLayoutEffect(() => {
     const id = location.state?.focusContainerId;
     if (!id || typeof id !== "string") return;
@@ -133,6 +166,7 @@ const PastRuns = () => {
         imageContains: applied.imageContains,
         startDate: applied.startDate,
         endDate: applied.endDate,
+        groupId: applied.groupId || undefined,
         outcome,
         runKind,
         sortBy,
@@ -249,6 +283,7 @@ const PastRuns = () => {
       imageContains: imageContains.trim(),
       startDate: startDate.trim(),
       endDate: endDate.trim(),
+      groupId: groupId.trim(),
     });
     setPage(1);
   };
@@ -289,6 +324,7 @@ const PastRuns = () => {
     let cfg = row.scenario_params;
     let sourceId = row.container_id;
     let sourceDisplayName = displayName(row);
+    let replayGroupId = row.groupId ?? null;
 
     if (row.run_kind_normalized === "replay") {
       const parentId = row.replay_of_container_id;
@@ -320,6 +356,7 @@ const PastRuns = () => {
         cfg = orig.scenario_params;
         sourceId = orig.container_id;
         sourceDisplayName = displayName(orig);
+        replayGroupId = orig.groupId ?? replayGroupId;
       } catch {
         dispatch(
           showToast(
@@ -338,6 +375,7 @@ const PastRuns = () => {
           sourceContainerId: sourceId,
           sourceDisplayName,
           params: cfg,
+          groupId: replayGroupId,
         },
       },
     });
@@ -378,9 +416,61 @@ const PastRuns = () => {
         <Title headingLevel="h1" size="3xl" className="past-runs__page-title">
           Past runs
         </Title>
-        <Button variant="secondary" onClick={load} isDisabled={loading}>
-          Refresh
-        </Button>
+        <div className="past-runs__export-actions">
+          <Button
+            variant="link"
+            icon={<DownloadIcon />}
+            iconPosition="end"
+            isDisabled={loading}
+            onClick={() =>
+              dispatch(
+                downloadHistoryExport(
+                  {
+                    nameRegex: applied.nameRegex,
+                    imageContains: applied.imageContains,
+                    startDate: applied.startDate,
+                    endDate: applied.endDate,
+                    outcome,
+                    runKind,
+                    sortBy,
+                    sortDir,
+                  },
+                  "json"
+                )
+              )
+            }
+          >
+            Export history JSON
+          </Button>
+          <Button
+            variant="link"
+            icon={<DownloadIcon />}
+            iconPosition="end"
+            isDisabled={loading}
+            onClick={() =>
+              dispatch(
+                downloadHistoryExport(
+                  {
+                    nameRegex: applied.nameRegex,
+                    imageContains: applied.imageContains,
+                    startDate: applied.startDate,
+                    endDate: applied.endDate,
+                    outcome,
+                    runKind,
+                    sortBy,
+                    sortDir,
+                  },
+                  "html"
+                )
+              )
+            }
+          >
+            Export history HTML
+          </Button>
+          <Button variant="secondary" onClick={load} isDisabled={loading}>
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="past-runs__body-rail">
@@ -393,6 +483,26 @@ const PastRuns = () => {
               onChange={(_e, v) => setNameRegex(v)}
               placeholder=""
             />
+          </FormGroup>
+          <FormGroup label="Group" fieldId="pr-group">
+            <FormSelect
+              id="pr-group"
+              value={groupId}
+              onChange={(_e, v) => {
+                setGroupId(v);
+                setApplied((prev) => ({ ...prev, groupId: v }));
+                setPage(1);
+              }}
+            >
+              <FormSelectOption value="" label="All groups" />
+              {filterGroups.map((g) => (
+                <FormSelectOption
+                  key={g.id}
+                  value={String(g.id)}
+                  label={g.name}
+                />
+              ))}
+            </FormSelect>
           </FormGroup>
           <FormGroup label="Run type" fieldId="pr-run-kind">
             <div className="pf-v5-c-form-control past-runs__run-type-wrap">
@@ -533,6 +643,7 @@ const PastRuns = () => {
                   Name <SortArrow field="name" />
                 </Button>
               </Th>
+              <Th className="past-runs__th-plain">Group</Th>
               <Th className="past-runs__th-plain">Type</Th>
               <Th className="past-runs__th-plain">Image</Th>
               <Th className="past-runs__th-plain">State</Th>
@@ -605,6 +716,7 @@ const PastRuns = () => {
                           </span>
                         </div>
                       </Td>
+                      <Td>{row.groupName || "—"}</Td>
                       <Td>
                         {row.run_kind_normalized === "replay" ? (
                           <Label color="blue" isCompact>
@@ -698,6 +810,38 @@ const PastRuns = () => {
                   icon={<DownloadIcon />}
                   iconPosition="end"
                   onClick={() =>
+                    dispatch(
+                      downloadRunExport(
+                        detailRow.container_id,
+                        displayName(detailRow),
+                        "json"
+                      )
+                    )
+                  }
+                >
+                  Download JSON
+                </Button>
+                <Button
+                  variant="link"
+                  icon={<DownloadIcon />}
+                  iconPosition="end"
+                  onClick={() =>
+                    dispatch(
+                      downloadRunExport(
+                        detailRow.container_id,
+                        displayName(detailRow),
+                        "html"
+                      )
+                    )
+                  }
+                >
+                  Download HTML
+                </Button>
+                <Button
+                  variant="link"
+                  icon={<DownloadIcon />}
+                  iconPosition="end"
+                  onClick={() =>
                     dispatch(downloadLogs(displayName(detailRow)))
                   }
                 >
@@ -717,6 +861,12 @@ const PastRuns = () => {
                   <DescriptionListTerm>Run ID</DescriptionListTerm>
                   <DescriptionListDescription>
                     {detailRow.container_id}
+                  </DescriptionListDescription>
+                </DescriptionListGroup>
+                <DescriptionListGroup>
+                  <DescriptionListTerm>Group</DescriptionListTerm>
+                  <DescriptionListDescription>
+                    {detailRow.groupName || "—"}
                   </DescriptionListDescription>
                 </DescriptionListGroup>
                 <DescriptionListGroup>

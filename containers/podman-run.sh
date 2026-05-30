@@ -8,6 +8,54 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHAOS_ASSETS="$ROOT_DIR/src/assets"
 KUBECONFIG_PATH="${KUBECONFIG_PATH:-$CHAOS_ASSETS/kubeconfig}"
 
+# Optional initial admin credentials (only used when bootstrapping an empty DB).
+# Usage examples:
+#   ./containers/podman-run.sh --admin-username admin --admin-password 'secret'
+#   ./containers/podman-run.sh admin 'secret'
+#   DASHBOARD_ADMIN_USERNAME=admin DASHBOARD_ADMIN_PASSWORD='secret' ./containers/podman-run.sh
+DASHBOARD_ADMIN_USERNAME="${DASHBOARD_ADMIN_USERNAME:-}"
+DASHBOARD_ADMIN_PASSWORD="${DASHBOARD_ADMIN_PASSWORD:-}"
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dashboard-admin-username|--admin-username|-u)
+      DASHBOARD_ADMIN_USERNAME="${2:-}"
+      shift 2
+      ;;
+    --dashboard-admin-password|--admin-password|-p)
+      DASHBOARD_ADMIN_PASSWORD="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage:"
+      echo "  $0 [--admin-username|-u USERNAME] [--admin-password|-p PASSWORD]"
+      echo "  $0 USERNAME PASSWORD"
+      echo "  DASHBOARD_ADMIN_USERNAME=... DASHBOARD_ADMIN_PASSWORD=... $0"
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "[error] Unknown option: $1" >&2
+      exit 1
+      ;;
+    *)
+      POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ ${#POSITIONAL[@]} -ge 1 ]]; then
+  DASHBOARD_ADMIN_USERNAME="${POSITIONAL[0]}"
+fi
+if [[ ${#POSITIONAL[@]} -ge 2 ]]; then
+  DASHBOARD_ADMIN_PASSWORD="${POSITIONAL[1]}"
+fi
+
 # krkn-hub images are commonly amd64-only; default to amd64 for cross-machine compatibility.
 ARCH="$(uname -m)"
 case "$ARCH" in
@@ -72,6 +120,8 @@ podman run -d \
   -e "CHAOS_ASSETS=$CHAOS_ASSETS" \
   -e "KUBECONFIG_PATH=$KUBECONFIG_PATH" \
   -e "EXTERNAL_CONTAINER_BUILD=false" \
+  -e "DASHBOARD_ADMIN_USERNAME=$DASHBOARD_ADMIN_USERNAME" \
+  -e "DASHBOARD_ADMIN_PASSWORD=$DASHBOARD_ADMIN_PASSWORD" \
   --security-opt label=disable \
   -v "$CHAOS_ASSETS:/usr/src/chaos-dashboard/src/assets:z" \
   -v "$KUBECONFIG_PATH:/usr/src/chaos-dashboard/src/assets/kubeconfig:z" \
@@ -83,3 +133,6 @@ podman run -d \
   "$IMAGE_NAME"
 
 echo "Started $CONTAINER_NAME (open http://localhost:3000)"
+if [[ -n "$DASHBOARD_ADMIN_USERNAME" && -n "$DASHBOARD_ADMIN_PASSWORD" ]]; then
+  echo "Initial admin credentials will be set from DASHBOARD_ADMIN_USERNAME / DASHBOARD_ADMIN_PASSWORD on first empty-database startup."
+fi
