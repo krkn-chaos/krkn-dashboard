@@ -569,4 +569,58 @@ export const paramsList = {
       isRequired: false,
     },
   ],
+  "application-outages": [
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
+    },
+    {
+      key: "namespace",
+      label: "Namespace",
+      fieldId: "namespace-id",
+      ariaDescribedby: "namespace",
+      helperText:
+        "Namespace to target. All application routes go inaccessible if Pod Selector is empty",
+      isRequired: true,
+    },
+    {
+      key: "pod_selector",
+      label: "Pod Selector",
+      fieldId: "pod_selector-id",
+      ariaDescribedby: "pod selector",
+      helperText:
+        'Pods to target, e.g. "{app: foo}" (space between key and value). Empty targets the whole namespace',
+      isRequired: false,
+    },
+    {
+      key: "duration",
+      label: "Duration",
+      fieldId: "duration-id",
+      ariaDescribedby: "duration",
+      helperText: "Seconds after which the routes become accessible again",
+      isRequired: false,
+    },
+    {
+      key: "block_traffic_type",
+      label: "Block Traffic Type",
+      fieldId: "block_traffic_type-id",
+      ariaDescribedby: "block traffic type",
+      helperText: "Direction of traffic to block",
+      isRequired: false,
+      type: "select",
+      options: ["[Ingress, Egress]", "[Ingress]", "[Egress]"],
+    },
+    {
+      key: "exclude_label",
+      label: "Exclude Pod Selector",
+      fieldId: "exclude_label-id",
+      ariaDescribedby: "exclude pod selector",
+      helperText: 'Pods to exclude from targeting, e.g. "{app: foo}"',
+      isRequired: false,
+    },
+  ],
 };
