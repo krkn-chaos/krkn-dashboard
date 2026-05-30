@@ -152,6 +152,21 @@ const NewExperiment = () => {
       name: "",
       scenarioChecked: "time-scenarios",
     },
+    "syn-flood": {
+      kubeconfigPath: "",
+      target_port: "",
+      namespace: "default",
+      target_service: "",
+      target_service_label: "",
+      total_chaos_duration: 120,
+      packet_size: 120,
+      window_size: 64,
+      number_of_pods: 2,
+      image: "quay.io/krkn-chaos/krkn-syn-flood:latest",
+      node_selectors: "",
+      name: "",
+      scenarioChecked: "syn-flood",
+    },
   });
 
   useEffect(() => {
