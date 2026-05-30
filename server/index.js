@@ -249,14 +249,54 @@ app.post("/start-kraken/", async (req, res) => {
     case "time-scenarios":
       command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
       break;
+    case "syn-flood": {
+      // Built as an argv array and run via execFile (no shell). Free-form user
+      // values such as target_service / node_selectors are passed as literal
+      // arguments, eliminating shell injection.
+      const p = req.body.params;
+      const platformArgs = PODMAN_RUN_PLATFORM_PREFIX.trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      commandArgs = [
+        "run",
+        ...platformArgs,
+        "--env",
+        `NAMESPACE=${p.namespace}`,
+        "--env",
+        `TARGET_PORT=${p.target_port}`,
+        "--env",
+        `TARGET_SERVICE=${p.target_service}`,
+        "--env",
+        `TARGET_SERVICE_LABEL=${p.target_service_label}`,
+        "--env",
+        `TOTAL_CHAOS_DURATION=${p.total_chaos_duration}`,
+        "--env",
+        `PACKET_SIZE=${p.packet_size}`,
+        "--env",
+        `WINDOW_SIZE=${p.window_size}`,
+        "--env",
+        `NUMBER_OF_PODS=${p.number_of_pods}`,
+        "--env",
+        `IMAGE=${p.image}`,
+        "--env",
+        `NODE_SELECTORS=${p.node_selectors}`,
+        `--name=${p.name}`,
+        "--net=host",
+        "-v",
+        `${kubeConfigPath}:/home/krkn/.kube/config:Z`,
+        "-d",
+        "quay.io/krkn-chaos/krkn-hub:syn-flood",
+      ];
+      break;
+    }
     default:
       command = `echo 'No scenario selected'`;
   }
-  console.log(command);
+  console.log(commandArgs ? `${PODMAN} ${commandArgs.join(" ")}` : command);
   // Podman prints pull/progress to stderr; a non-empty stderr is normal. Only treat
   // non-zero exit (err) as failure. Use a large buffer so first-time image pulls don't
   // hit ERR_CHILD_PROCESS_STDIO_MAXBUFFER.
-  child_process.exec(command, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
+  const onKrakenExec = (err, stdout, stderr) => {
     if (!err) {
       const params = paramsForMeta || {};
       const replayOf = params.replayOfContainerId;
@@ -310,7 +350,12 @@ app.post("/start-kraken/", async (req, res) => {
       message: detail || "Unknown error",
       status: "failed",
     });
-  });
+  };
+  if (commandArgs) {
+    child_process.execFile(PODMAN, commandArgs, EXEC_LARGE_MAX_BUFFER, onKrakenExec);
+  } else {
+    child_process.exec(command, EXEC_LARGE_MAX_BUFFER, onKrakenExec);
+  }
 });
 
 app.get("/getPodStatus", (req, res) => {
