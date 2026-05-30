@@ -11,6 +11,10 @@ import {
   FormGroup,
   Grid,
   GridItem,
+  MenuToggle,
+  Select,
+  SelectList,
+  SelectOption,
   TextInput,
   Title,
 } from "@patternfly/react-core";
@@ -25,6 +29,44 @@ import { extractReplayBaseStem } from "@/utils/replayNaming";
 import { paramsList } from "./experimentFormData";
 import { showToast } from "@/actions/toastActions";
 import { startKraken, updateScenarioChecked } from "@/actions/newExperiment";
+
+// Single-select dropdown for params with a fixed set of valid values
+// (e.g. network-chaos TRAFFIC_TYPE / EXECUTION).
+const ScenarioSelectField = ({ id, value, options, onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const toggle = (toggleRef) => (
+    <MenuToggle
+      ref={toggleRef}
+      id={id}
+      onClick={() => setIsOpen((prev) => !prev)}
+      isExpanded={isOpen}
+      isFullWidth
+    >
+      {value}
+    </MenuToggle>
+  );
+  return (
+    <Select
+      isOpen={isOpen}
+      selected={value}
+      onSelect={(_event, selected) => {
+        onSelect(selected);
+        setIsOpen(false);
+      }}
+      onOpenChange={(open) => setIsOpen(open)}
+      toggle={toggle}
+      shouldFocusToggleOnSelect
+    >
+      <SelectList>
+        {options.map((option) => (
+          <SelectOption key={option} value={option}>
+            {option}
+          </SelectOption>
+        ))}
+      </SelectList>
+    </Select>
+  );
+};
 
 const mergeReplayScenarioFields = (stored, baseBlock) => {
   const next = { ...baseBlock };
@@ -144,6 +186,23 @@ const NewExperiment = () => {
       namespace: "",
       name: "",
       scenarioChecked: "time-scenarios",
+    },
+    "network-chaos": {
+      kubeconfigPath: "",
+      traffic_type: "egress",
+      duration: 300,
+      label_selector: "node-role.kubernetes.io/master",
+      execution: "parallel",
+      instance_count: 1,
+      node_name: "",
+      interfaces: "[]",
+      egress: "{bandwidth: 100mbit}",
+      target_node_and_interface: "",
+      network_params: "",
+      wait_duration: 300,
+      image: "quay.io/krkn-chaos/krkn:tools",
+      name: "",
+      scenarioChecked: "network-chaos",
     },
   });
 
@@ -323,17 +382,28 @@ const NewExperiment = () => {
                       fieldId={item.fieldId}
                       helperText={item.helperText}
                     >
-                      <TextInput
-                        isRequired={item.isRequired}
-                        type="text"
-                        id={item.fieldId}
-                        name={item.key}
-                        value={data[scenarioChecked][item.key]}
-                        aria-describedby={item.ariaDescribedby}
-                        onChange={(evt, val) =>
-                          changeHandler(evt, val, item.key)
-                        }
-                      />
+                      {item.type === "select" ? (
+                        <ScenarioSelectField
+                          id={item.fieldId}
+                          value={data[scenarioChecked][item.key]}
+                          options={item.options || []}
+                          onSelect={(selected) =>
+                            changeHandler(null, selected, item.key)
+                          }
+                        />
+                      ) : (
+                        <TextInput
+                          isRequired={item.isRequired}
+                          type="text"
+                          id={item.fieldId}
+                          name={item.key}
+                          value={data[scenarioChecked][item.key]}
+                          aria-describedby={item.ariaDescribedby}
+                          onChange={(evt, val) =>
+                            changeHandler(evt, val, item.key)
+                          }
+                        />
+                      )}
                     </FormGroup>
                   </GridItem>
                 );

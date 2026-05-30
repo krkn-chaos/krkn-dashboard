@@ -249,14 +249,59 @@ app.post("/start-kraken/", async (req, res) => {
     case "time-scenarios":
       command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
       break;
+    case "network-chaos": {
+      // Built as an argv array and run via execFile (no shell). Values such as
+      // egress / network_params ("{bandwidth: 100mbit}"), interfaces ("[eth0,eth1]")
+      // and target_node_and_interface contain braces/brackets/colons/spaces and are
+      // passed as literal arguments, eliminating shell injection and quoting issues.
+      const p = req.body.params;
+      const platformArgs = PODMAN_RUN_PLATFORM_PREFIX.trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      commandArgs = [
+        "run",
+        ...platformArgs,
+        "--env",
+        `TRAFFIC_TYPE=${p.traffic_type}`,
+        "--env",
+        `DURATION=${p.duration}`,
+        "--env",
+        `LABEL_SELECTOR=${p.label_selector}`,
+        "--env",
+        `EXECUTION=${p.execution}`,
+        "--env",
+        `INSTANCE_COUNT=${p.instance_count}`,
+        "--env",
+        `NODE_NAME=${p.node_name}`,
+        "--env",
+        `INTERFACES=${p.interfaces}`,
+        "--env",
+        `EGRESS=${p.egress}`,
+        "--env",
+        `TARGET_NODE_AND_INTERFACE=${p.target_node_and_interface}`,
+        "--env",
+        `NETWORK_PARAMS=${p.network_params}`,
+        "--env",
+        `WAIT_DURATION=${p.wait_duration}`,
+        "--env",
+        `IMAGE=${p.image}`,
+        `--name=${p.name}`,
+        "--net=host",
+        "-v",
+        `${kubeConfigPath}:/home/krkn/.kube/config:Z`,
+        "-d",
+        "quay.io/krkn-chaos/krkn-hub:network-chaos",
+      ];
+      break;
+    }
     default:
       command = `echo 'No scenario selected'`;
   }
-  console.log(command);
+  console.log(commandArgs ? `${PODMAN} ${commandArgs.join(" ")}` : command);
   // Podman prints pull/progress to stderr; a non-empty stderr is normal. Only treat
   // non-zero exit (err) as failure. Use a large buffer so first-time image pulls don't
   // hit ERR_CHILD_PROCESS_STDIO_MAXBUFFER.
-  child_process.exec(command, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
+  const onKrakenExec = (err, stdout, stderr) => {
     if (!err) {
       const params = paramsForMeta || {};
       const replayOf = params.replayOfContainerId;
@@ -310,7 +355,12 @@ app.post("/start-kraken/", async (req, res) => {
       message: detail || "Unknown error",
       status: "failed",
     });
-  });
+  };
+  if (commandArgs) {
+    child_process.execFile(PODMAN, commandArgs, EXEC_LARGE_MAX_BUFFER, onKrakenExec);
+  } else {
+    child_process.exec(command, EXEC_LARGE_MAX_BUFFER, onKrakenExec);
+  }
 });
 
 app.get("/getPodStatus", (req, res) => {
