@@ -2,6 +2,7 @@ import "./index.less";
 
 import { Card, CardBody, Title } from "@patternfly/react-core";
 import {
+  BanIcon,
   ContainerNodeIcon,
   CubeIcon,
   DatabaseIcon,
@@ -64,6 +65,13 @@ const scenariosOptions = [
     label: "Time Scenarios",
     icon: OutlinedClockIcon,
     isImg: false,
+  },
+  {
+    id: 12,
+    key: "application-outages",
+    label: "Application Outage",
+    isImg: false,
+    icon: BanIcon,
   },
 ];
 

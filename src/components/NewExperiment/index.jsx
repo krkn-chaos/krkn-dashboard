@@ -11,6 +11,10 @@ import {
   FormGroup,
   Grid,
   GridItem,
+  MenuToggle,
+  Select,
+  SelectList,
+  SelectOption,
   TextInput,
   Title,
 } from "@patternfly/react-core";
@@ -28,6 +32,44 @@ import { paramsList } from "./experimentFormData";
 import { setActiveGroupId } from "@/actions/authActions";
 import { showToast } from "@/actions/toastActions";
 import { startKraken, updateScenarioChecked } from "@/actions/newExperiment";
+
+// Single-select dropdown for params with a fixed set of valid values
+// (e.g. application-outage BLOCK_TRAFFIC_TYPE).
+const ScenarioSelectField = ({ id, value, options, onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const toggle = (toggleRef) => (
+    <MenuToggle
+      ref={toggleRef}
+      id={id}
+      onClick={() => setIsOpen((prev) => !prev)}
+      isExpanded={isOpen}
+      isFullWidth
+    >
+      {value}
+    </MenuToggle>
+  );
+  return (
+    <Select
+      isOpen={isOpen}
+      selected={value}
+      onSelect={(_event, selected) => {
+        onSelect(selected);
+        setIsOpen(false);
+      }}
+      onOpenChange={(open) => setIsOpen(open)}
+      toggle={toggle}
+      shouldFocusToggleOnSelect
+    >
+      <SelectList>
+        {options.map((option) => (
+          <SelectOption key={option} value={option}>
+            {option}
+          </SelectOption>
+        ))}
+      </SelectList>
+    </Select>
+  );
+};
 
 const mergeReplayScenarioFields = (stored, baseBlock) => {
   const next = { ...baseBlock };
@@ -151,6 +193,16 @@ const NewExperiment = () => {
       namespace: "",
       name: "",
       scenarioChecked: "time-scenarios",
+    },
+    "application-outages": {
+      kubeconfigPath: "",
+      namespace: "",
+      pod_selector: "",
+      duration: 600,
+      block_traffic_type: "[Ingress, Egress]",
+      exclude_label: "",
+      name: "",
+      scenarioChecked: "application-outages",
     },
   });
 
@@ -435,17 +487,28 @@ const NewExperiment = () => {
                       fieldId={item.fieldId}
                       helperText={item.helperText}
                     >
-                      <TextInput
-                        isRequired={item.isRequired}
-                        type="text"
-                        id={item.fieldId}
-                        name={item.key}
-                        value={data[scenarioChecked][item.key]}
-                        aria-describedby={item.ariaDescribedby}
-                        onChange={(evt, val) =>
-                          changeHandler(evt, val, item.key)
-                        }
-                      />
+                      {item.type === "select" ? (
+                        <ScenarioSelectField
+                          id={item.fieldId}
+                          value={data[scenarioChecked][item.key]}
+                          options={item.options || []}
+                          onSelect={(selected) =>
+                            changeHandler(null, selected, item.key)
+                          }
+                        />
+                      ) : (
+                        <TextInput
+                          isRequired={item.isRequired}
+                          type="text"
+                          id={item.fieldId}
+                          name={item.key}
+                          value={data[scenarioChecked][item.key]}
+                          aria-describedby={item.ariaDescribedby}
+                          onChange={(evt, val) =>
+                            changeHandler(evt, val, item.key)
+                          }
+                        />
+                      )}
                     </FormGroup>
                   </GridItem>
                 );
