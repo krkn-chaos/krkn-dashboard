@@ -8,6 +8,7 @@ import {
   MemoryIcon,
   MicrochipIcon,
   OutlinedClockIcon,
+  UserSecretIcon,
 } from "@patternfly/react-icons";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -64,6 +65,13 @@ const scenariosOptions = [
     label: "Time Scenarios",
     icon: OutlinedClockIcon,
     isImg: false,
+  },
+  {
+    id: 10,
+    key: "service-hijacking",
+    label: "Service Hijacking",
+    isImg: false,
+    icon: UserSecretIcon,
   },
 ];
 

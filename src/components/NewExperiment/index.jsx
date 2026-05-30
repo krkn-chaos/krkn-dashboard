@@ -11,6 +11,7 @@ import {
   FormGroup,
   Grid,
   GridItem,
+  TextArea,
   TextInput,
   Title,
 } from "@patternfly/react-core";
@@ -25,6 +26,40 @@ import { extractReplayBaseStem } from "@/utils/replayNaming";
 import { paramsList } from "./experimentFormData";
 import { showToast } from "@/actions/toastActions";
 import { startKraken, updateScenarioChecked } from "@/actions/newExperiment";
+
+const SERVICE_HIJACKING_TEMPLATE = `service_target_port: http-web-svc # port of the service to hijack (named or numeric)
+service_name: nginx-service # name of the service to be hijacked
+service_namespace: default # namespace where the target service is located
+image: quay.io/krkn-chaos/krkn-service-hijacking:v0.1.3 # krkn web service image
+chaos_duration: 30 # total duration of the chaos scenario in seconds
+privileged: True # run the web service with a privileged securityContext
+plan:
+  - resource: "/list/index.php" # path/resource to respond to
+    steps:
+      GET:
+        - duration: 15 # seconds this step lasts
+          status: 500 # HTTP status to return
+          mime_type: "application/json"
+          payload: |
+            {
+              "status":"internal server error"
+            }
+        - duration: 15
+          status: 201
+          mime_type: "application/json"
+          payload: |
+            {
+              "status":"resource created"
+            }
+      POST:
+        - duration: 30
+          status: 401
+          mime_type: "application/json"
+          payload: |
+            {
+               "status": "unauthorized"
+            }
+`;
 
 const mergeReplayScenarioFields = (stored, baseBlock) => {
   const next = { ...baseBlock };
@@ -144,6 +179,12 @@ const NewExperiment = () => {
       namespace: "",
       name: "",
       scenarioChecked: "time-scenarios",
+    },
+    "service-hijacking": {
+      kubeconfigPath: "",
+      name: "",
+      scenario_yaml: SERVICE_HIJACKING_TEMPLATE,
+      scenarioChecked: "service-hijacking",
     },
   });
 
@@ -315,25 +356,42 @@ const NewExperiment = () => {
             </GridItem>
             {scenarioChecked &&
               paramsList[scenarioChecked].map((item) => {
+                const isTextarea = item.type === "textarea";
                 return (
-                  <GridItem span={6} key={item.key}>
+                  <GridItem span={isTextarea ? 12 : 6} key={item.key}>
                     <FormGroup
                       isRequired={item.isRequired}
                       label={item.label}
                       fieldId={item.fieldId}
                       helperText={item.helperText}
                     >
-                      <TextInput
-                        isRequired={item.isRequired}
-                        type="text"
-                        id={item.fieldId}
-                        name={item.key}
-                        value={data[scenarioChecked][item.key]}
-                        aria-describedby={item.ariaDescribedby}
-                        onChange={(evt, val) =>
-                          changeHandler(evt, val, item.key)
-                        }
-                      />
+                      {isTextarea ? (
+                        <TextArea
+                          isRequired={item.isRequired}
+                          id={item.fieldId}
+                          name={item.key}
+                          value={data[scenarioChecked][item.key]}
+                          aria-describedby={item.ariaDescribedby}
+                          onChange={(evt, val) =>
+                            changeHandler(evt, val, item.key)
+                          }
+                          rows={item.rows || 16}
+                          resizeOrientation="vertical"
+                          style={{ fontFamily: "monospace" }}
+                        />
+                      ) : (
+                        <TextInput
+                          isRequired={item.isRequired}
+                          type="text"
+                          id={item.fieldId}
+                          name={item.key}
+                          value={data[scenarioChecked][item.key]}
+                          aria-describedby={item.ariaDescribedby}
+                          onChange={(evt, val) =>
+                            changeHandler(evt, val, item.key)
+                          }
+                        />
+                      )}
                     </FormGroup>
                   </GridItem>
                 );
