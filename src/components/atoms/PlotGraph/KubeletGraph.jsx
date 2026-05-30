@@ -39,14 +39,24 @@ const KubeletGraph = (props) => {
     },
     yaxis: {
       autorange: "reversed",
+      automargin: true,
+      ticksuffix: " ",
     },
     bargap: 0.2,
+    autosize: true,
     height: 400,
-    width: 500,
-    margin: { l: 60, r: 150, t: 80, b: 80 },
+    margin: { l: 80, r: 150, t: 80, b: 80 },
   };
 
-  return <Plot data={plotData} layout={layout} config={{ responsive: true }} />;
+  return (
+    <Plot
+      data={plotData}
+      layout={layout}
+      config={{ responsive: true }}
+      useResizeHandler
+      style={{ width: "100%", height: "400px" }}
+    />
+  );
 };
 
 export default KubeletGraph;
