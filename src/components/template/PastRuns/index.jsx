@@ -45,6 +45,7 @@ import {
   downloadRunExport,
 } from "@/actions/newExperiment";
 import { showToast } from "@/actions/toastActions";
+import ResiliencyScore from "@/components/molecules/ResiliencyScore";
 import API from "@/utils/axiosInstance";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -648,6 +649,7 @@ const PastRuns = () => {
               <Th className="past-runs__th-plain">State</Th>
               <Th className="past-runs__th-plain">Exit code</Th>
               <Th className="past-runs__th-plain">Outcome</Th>
+              <Th className="past-runs__th-plain">Resiliency</Th>
               <Th className="past-runs__th-finished">
                 <Button
                   type="button"
@@ -737,6 +739,12 @@ const PastRuns = () => {
                             Fail
                           </Label>
                         )}
+                      </Td>
+                      <Td onClick={(e) => e.stopPropagation()}>
+                        <ResiliencyScore
+                          resiliency={row.resiliency}
+                          variant="compact"
+                        />
                       </Td>
                       <Td>{formatFinishedAt(row.stored_at)}</Td>
                     </Tr>
@@ -930,6 +938,14 @@ const PastRuns = () => {
                   </DescriptionListGroup>
                 ) : null}
               </DescriptionList>
+              {detailRow.resiliency ? (
+                <div className="past-runs__resiliency">
+                  <ResiliencyScore
+                    resiliency={detailRow.resiliency}
+                    variant="detailed"
+                  />
+                </div>
+              ) : null}
             </CardBody>
           </Card>
           <Card className="past-runs__logs-card">

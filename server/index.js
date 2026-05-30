@@ -46,6 +46,7 @@ import {
 } from "./pastRuns.js";
 
 import { fetchGrafanaDashboardList } from "./grafanaDashboardIndex.js";
+import { extractResiliencyFromLogs } from "./resiliency.js";
 import { Server } from "socket.io";
 import child_process from "child_process";
 import chmodr from "chmodr";
@@ -819,6 +820,7 @@ const savePodDetailsToFile = async (podName, fileContent) => {
           podName,
           displayName
         );
+        const resiliency = extractResiliencyFromLogs(stripAnsi(fileContent || ""));
         await savePodDetails(
           row.Id,
           row.ImageName || row.Image || "",
@@ -827,7 +829,10 @@ const savePodDetailsToFile = async (podName, fileContent) => {
           String(row.State?.ExitCode ?? ""),
           displayName,
           fileContent,
-          meta || {}
+          {
+            ...(meta || {}),
+            resiliency_report: resiliency ? JSON.stringify(resiliency) : null,
+          }
         );
       } catch (error) {
         console.log("Error saving pod details:", error);

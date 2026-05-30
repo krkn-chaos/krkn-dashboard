@@ -1,4 +1,5 @@
 import { createOpenSearchClientFromOptions } from "./client.js";
+import { normalizeOverallResiliencyReport } from "../resiliency.js";
 
 /**
  * Paginated telemetry runs + facet aggs for the Elastic Runs **Runs** table and connect flow.
@@ -144,6 +145,7 @@ export class ElasticRunListService {
       cluster_version,
       kubernetes_objects_count,
       run_uuid,
+      overall_resiliency_report,
     } = source;
 
     const scenario = scenarios[0] || {};
@@ -160,6 +162,7 @@ export class ElasticRunListService {
       namespace: namespace || target_namespace || "default",
       node_summary_infos: node_summary_infos || [],
       kubernetes_objects_count: kubernetes_objects_count || {},
+      resiliency: normalizeOverallResiliencyReport(overall_resiliency_report),
 
       config: {
         id: parameters.id || "unknown",

@@ -1,0 +1,41 @@
+.resiliency-score {
+  &--compact {
+    min-width: 7rem;
+  }
+
+  &--detailed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__empty {
+    color: var(--pf-v5-global--Color--200);
+  }
+
+  &__slos {
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--200);
+  }
+
+  &__scenarios {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+  }
+
+  &__scenario {
+    display: grid;
+    grid-template-columns: minmax(8rem, 14rem) 1fr;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__scenario-name {
+    font-size: 0.8125rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

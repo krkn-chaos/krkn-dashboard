@@ -78,9 +78,19 @@ export function enrichRunRow(row) {
       scenario_params = null;
     }
   }
+  let resiliency = null;
+  const rawResiliency = row.resiliency_report;
+  if (rawResiliency != null && String(rawResiliency).trim() !== "") {
+    try {
+      resiliency = JSON.parse(String(rawResiliency));
+    } catch {
+      resiliency = null;
+    }
+  }
   return {
     ...row,
     scenario_params,
+    resiliency,
     run_kind_normalized: normalizeRunKind(row),
   };
 }
