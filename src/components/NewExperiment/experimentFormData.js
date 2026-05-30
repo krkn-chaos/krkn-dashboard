@@ -569,4 +569,58 @@ export const paramsList = {
       isRequired: false,
     },
   ],
+  "service-disruption": [
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
+    },
+    {
+      key: "namespace",
+      label: "Namespace",
+      fieldId: "namespace-id",
+      ariaDescribedby: "namespace",
+      helperText:
+        "Namespace to target. Set only if Label Selector is not set",
+      isRequired: false,
+    },
+    {
+      key: "label_selector",
+      label: "Label Selector",
+      fieldId: "label_selector-id",
+      ariaDescribedby: "label selector",
+      helperText:
+        "Label of the namespace to target. Set only if Namespace is not set",
+      isRequired: false,
+    },
+    {
+      key: "sleep",
+      label: "Sleep",
+      fieldId: "sleep-id",
+      ariaDescribedby: "sleep",
+      helperText:
+        "Seconds to wait before polling to see if the namespace exists again",
+      isRequired: false,
+    },
+    {
+      key: "delete_count",
+      label: "Delete Count",
+      fieldId: "delete_count-id",
+      ariaDescribedby: "delete count",
+      helperText:
+        "Number of namespaces to kill in each run, based on matching namespace and label",
+      isRequired: false,
+    },
+    {
+      key: "runs",
+      label: "Runs",
+      fieldId: "runs-id",
+      ariaDescribedby: "runs",
+      helperText: "Number of runs to execute the action",
+      isRequired: false,
+    },
+  ],
 };
