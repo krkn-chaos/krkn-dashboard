@@ -334,14 +334,44 @@ app.post("/start-kraken/", async (req, res) => {
     case "time-scenarios":
       command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
       break;
+    case "service-disruption": {
+      // Built as an argv array and run via execFile (no shell). Free-form values
+      // such as namespace / label_selector are passed as literal arguments,
+      // eliminating shell injection.
+      const p = req.body.params;
+      const platformArgs = PODMAN_RUN_PLATFORM_PREFIX.trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      commandArgs = [
+        "run",
+        ...platformArgs,
+        "--env",
+        `NAMESPACE=${p.namespace}`,
+        "--env",
+        `LABEL_SELECTOR=${p.label_selector}`,
+        "--env",
+        `SLEEP=${p.sleep}`,
+        "--env",
+        `DELETE_COUNT=${p.delete_count}`,
+        "--env",
+        `RUNS=${p.runs}`,
+        `--name=${p.name}`,
+        "--net=host",
+        "-v",
+        `${kubeConfigPath}:/home/krkn/.kube/config:Z`,
+        "-d",
+        "quay.io/krkn-chaos/krkn-hub:service-disruption-scenarios",
+      ];
+      break;
+    }
     default:
       command = `echo 'No scenario selected'`;
   }
-  console.log(command);
+  console.log(commandArgs ? `${PODMAN} ${commandArgs.join(" ")}` : command);
   // Podman prints pull/progress to stderr; a non-empty stderr is normal. Only treat
   // non-zero exit (err) as failure. Use a large buffer so first-time image pulls don't
   // hit ERR_CHILD_PROCESS_STDIO_MAXBUFFER.
-  child_process.exec(command, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
+  const onKrakenExec = (err, stdout, stderr) => {
     if (!err) {
       const params = paramsForMeta || {};
       const replayOf = params.replayOfContainerId;
@@ -408,7 +438,12 @@ app.post("/start-kraken/", async (req, res) => {
       message: detail || "Unknown error",
       status: "failed",
     });
-  });
+  };
+  if (commandArgs) {
+    child_process.execFile(PODMAN, commandArgs, EXEC_LARGE_MAX_BUFFER, onKrakenExec);
+  } else {
+    child_process.exec(command, EXEC_LARGE_MAX_BUFFER, onKrakenExec);
+  }
 });
 
 app.get("/getPodStatus", (req, res) => {

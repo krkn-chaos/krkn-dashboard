@@ -152,6 +152,16 @@ const NewExperiment = () => {
       name: "",
       scenarioChecked: "time-scenarios",
     },
+    "service-disruption": {
+      kubeconfigPath: "",
+      namespace: "openshift-etcd",
+      label_selector: "",
+      sleep: 15,
+      delete_count: 1,
+      runs: 1,
+      name: "",
+      scenarioChecked: "service-disruption",
+    },
   });
 
   useEffect(() => {
