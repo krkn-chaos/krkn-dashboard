@@ -569,4 +569,25 @@ export const paramsList = {
       isRequired: false,
     },
   ],
+  "service-hijacking": [
+    {
+      key: "name",
+      label: "Name",
+      fieldId: "name-id",
+      ariaDescribedby: "name",
+      helperText: "",
+      isRequired: true,
+    },
+    {
+      key: "scenario_yaml",
+      label: "Scenario File (YAML)",
+      fieldId: "scenario_yaml-id",
+      ariaDescribedby: "scenario yaml",
+      helperText:
+        "Service-hijacking scenario definition. Reroutes traffic for the target service to a krkn web service that returns the responses defined in the plan. Sent to the container base64-encoded as SCENARIO_BASE64.",
+      isRequired: true,
+      type: "textarea",
+      rows: 18,
+    },
+  ],
 };
