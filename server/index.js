@@ -224,6 +224,7 @@ app.post("/start-kraken/", async (req, res) => {
   const kubeConfigPath = (process.env.KUBECONFIG_PATH || "").trim() || kubeConfigFileLocation;
 
   let command = "";
+  let commandArgs = null;
   switch (scenario) {
     case "pod-scenarios":
       command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_DURATION=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:pod-scenarios`;
