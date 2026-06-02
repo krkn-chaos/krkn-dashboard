@@ -1,35 +1,46 @@
 .scenarios-container {
-  .parent {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    padding: 16px;
-    .card {
-      margin: 0.5vw;
+  #scenario-typeahead-select {
+    width: 100%;
+  }
+
+  .scenario-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 8px;
+
+    svg,
+    .scenario-option-icon {
+      width: 22px;
+      height: 22px;
     }
-    .card:hover {
-      cursor: pointer;
-    }
-    .card.active {
-      border: 2px solid #45b5f5;
-    }
-    .card-wrapper {
-      display: flex;
-      justify-content: space-between;
-      width: 15vw;
-      height: 10vh;
-      .img-wrapper {
-        svg {
-          width: 35px;
-          height: 35px;
-        }
+  }
+
+  .scenario-select-list {
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .scenario-option-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .scenario-option-icon-wrapper {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+
+      svg {
+        width: 24px;
+        height: 24px;
       }
-      .scenario-icon {
-        width: 50px;
-        height: 50px;
-      }
-      .scenario-name {
-        padding-top: 5px;
+
+      .scenario-option-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 4px;
+        object-fit: cover;
       }
     }
   }

@@ -435,9 +435,14 @@ const NewExperiment = () => {
               </Grid>
             </GridItem>
             {scenarioChecked &&
-              paramsList[scenarioChecked].map((item) => {
+              paramsList[scenarioChecked].map((item, index) => {
                 return (
-                  <GridItem span={6} key={item.key}>
+                  <GridItem
+                    span={6}
+                    key={`${scenarioChecked}-${item.key}`}
+                    className="new-experiment__field-enter"
+                    style={{ animationDelay: `${index * 45}ms` }}
+                  >
                     <FormGroup
                       isRequired={item.isRequired}
                       label={item.label}
