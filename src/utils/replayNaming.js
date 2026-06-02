@@ -1,3 +1,4 @@
+// Assisted-by: Cursor:Codex5.3
 /** Match server `extractReplayBaseStem` for kube/Podman display names */
 export function extractReplayBaseStem(name) {
   let s = String(name ?? "krkn-run").replace(/^\//, "");

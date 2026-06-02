@@ -1,0 +1,44 @@
+.change-password-modal {
+  &__title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  &__submit-wrap {
+    display: inline-block;
+    width: 100%;
+    cursor: not-allowed;
+
+    .change-password-modal__submit {
+      width: 100%;
+      pointer-events: none;
+    }
+  }
+
+  &__submit {
+    width: 100%;
+  }
+
+  &__help-btn {
+    padding: 0;
+    min-height: auto;
+    line-height: 1;
+    color: var(--pf-v5-global--Color--200);
+
+    &:hover {
+      color: var(--pf-v5-global--primary-color--100);
+    }
+  }
+
+  &__rules-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    text-align: left;
+    font-size: var(--pf-v5-global--FontSize--sm);
+  }
+
+  &__validation-alert {
+    margin-bottom: 1rem;
+  }
+}

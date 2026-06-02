@@ -5,72 +5,86 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { CatalogIcon } from "@patternfly/react-icons";
 import { setActiveItem } from "@/actions/sideMenuActions.js";
+import { pathForMenuKey } from "@/utils/navPaths";
 
-const sideMenuOptions = [
+const baseMenuOptions = [
   {
-    id: 0,
     key: "overview",
     displayName: "Run Kraken",
     icon: <CatalogIcon />,
+    roles: ["admin", "user"],
   },
   {
-    id: 1,
     key: "past-runs",
     displayName: "Past Runs",
     icon: <CatalogIcon />,
+    roles: ["admin", "user"],
   },
   {
-    id: 2,
     key: "elastic-runs",
     displayName: "Elastic Runs",
     icon: <CatalogIcon />,
+    roles: ["admin", "user"],
+  },
+  {
+    key: "settings",
+    displayName: "Account Settings",
+    icon: <CatalogIcon />,
+    roles: ["admin", "user"],
+  },
+  {
+    key: "administration",
+    displayName: "Administration",
+    icon: <CatalogIcon />,
+    roles: ["admin"],
   },
 ];
 
 const MenuOptions = () => {
   const dispatch = useDispatch();
-  // const [activeItem, setActiveItem] = React.useState(0);
-
-  const activeMenuItem = useSelector((state) => state.header.activeMenuItem);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
+  const activeMenuItem = useSelector((state) => state.header.activeMenuItem);
+  const userRole = useSelector((state) => state.auth.user?.role);
+  const sideMenuOptions = baseMenuOptions.filter(
+    (o) => !userRole || o.roles.includes(userRole)
+  );
+
+  const goTo = (key) => {
+    dispatch(setActiveItem(key));
+    navigate(pathForMenuKey(key));
+  };
+
   const onSelect = (_event, itemId) => {
-    const selected = sideMenuOptions.find((option) => option.id === itemId);
-    if (selected?.key) {
-      dispatch(setActiveItem(selected.key));
-    }
+    if (itemId) goTo(String(itemId));
   };
 
   useEffect(() => {
     const normalized = (pathname || "/").replace(/\/+$/, "") || "/";
-    /* Index route is Run Kraken (Overview); pathname "/" must not leave sidebar on Past Runs */
     if (normalized === "/" || normalized === "") {
       dispatch(setActiveItem("overview"));
       return;
     }
-    const currPath = pathname.replace(/^.*[/]([^/]+)[/]*$/, "$1");
-    dispatch(setActiveItem(currPath));
+    const segment = normalized.replace(/^\//, "").split("/")[0];
+    dispatch(setActiveItem(segment || "overview"));
   }, [dispatch, pathname]);
+
   return (
-    <>
-      <Nav onSelect={onSelect}>
-        <NavList>
-          {sideMenuOptions.map((option) => {
-            return (
-              <NavItem
-                key={option.key}
-                itemId={option.id}
-                isActive={activeMenuItem === option.key}
-                onClick={() => navigate(option.key)}
-              >
-                {option.displayName}
-              </NavItem>
-            );
-          })}
-        </NavList>
-      </Nav>
-    </>
+    <Nav onSelect={onSelect}>
+      <NavList>
+        {sideMenuOptions.map((option) => (
+          <NavItem
+            key={option.key}
+            itemId={option.key}
+            isActive={activeMenuItem === option.key}
+            onClick={() => goTo(option.key)}
+          >
+            {option.displayName}
+          </NavItem>
+        ))}
+      </NavList>
+    </Nav>
   );
 };
 

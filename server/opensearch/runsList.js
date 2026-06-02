@@ -36,11 +36,6 @@ export class ElasticRunListService {
             },
           },
         },
-        {
-          match: {
-            "scenarios.scenario_type": "pod_disruption_scenarios",
-          },
-        },
       ];
 
       if (appliedFilters && Object.keys(appliedFilters).length > 0) {

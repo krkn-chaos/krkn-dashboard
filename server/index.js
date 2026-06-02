@@ -1,4 +1,5 @@
 // server/index.js
+import "./config/loadEnv.js";
 import * as path from "path";
 
 import {
@@ -13,6 +14,19 @@ import {
   saveConfig,
   savePodDetails,
 } from "./db.js";
+import { recordAudit } from "./db/audit.js";
+import { findById as findUserById } from "./db/users.js";
+import authRoutes from "./auth/routes.js";
+import {
+  authorize,
+  filterGroupIdsForUser,
+  resolvePastRunsGroupIds,
+} from "./auth/policy.js";
+import { requireAuth } from "./auth/middleware.js";
+import { createSessionMiddleware } from "./auth/session.js";
+import { resolveRunContext } from "./helpers/runContext.js";
+import { mountExportRoutes } from "./exportRoutes.js";
+import { countRunningOnCluster } from "./helpers/runningCluster.js";
 import {
   ElasticRunListService,
   fetchAlertsFromOpenSearch,
@@ -55,6 +69,15 @@ initDatabase();
 
 app.use(cors());
 app.use(express.json());
+app.use(createSessionMiddleware());
+
+await initDatabase();
+app.use("/auth", authRoutes);
+app.use(requireAuth);
+
+mountExportRoutes(app, { getDetailsByContainerId, getDetailsForAnalytics });
+
+mountExportRoutes(app, { getDetailsByContainerId, getDetailsForAnalytics });
 
 /* Set path to upload config file */
 const uploadFilePath = path.resolve(__dirname, "../", "src/assets");
@@ -195,9 +218,72 @@ if (
   }
 }
 
+function getRunningKrknPods() {
+  return new Promise((resolve, reject) => {
+    child_process.exec(
+      PODMAN_PS_KRKN_HUB_JSON,
+      EXEC_LARGE_MAX_BUFFER,
+      (err, stdout, stderr) => {
+        if (err) {
+          reject(new Error(err.message || stderr || "Failed to list containers"));
+          return;
+        }
+        try {
+          const podData = JSON.parse(stdout || "[]");
+          const pods = Array.isArray(podData) ? podData : [podData];
+          resolve(
+            pods.filter((pod) => String(pod?.Image || "").includes("krkn-hub"))
+          );
+        } catch (parseError) {
+          reject(parseError);
+        }
+      }
+    );
+  });
+}
+
+app.post("/check-cluster-runs", async (req, res) => {
+  try {
+    const params = req.body?.params || {};
+    const runCtx = await resolveRunContext(
+      req,
+      params,
+      resolveKubeconfigPathForRequest
+    );
+    await authorize(req.user, "run", runCtx.clusterKey, runCtx.groupId);
+    const pods = await getRunningKrknPods();
+    const runningCount = countRunningOnCluster(
+      runCtx.clusterKey,
+      pods,
+      pendingRunMetadata
+    );
+    return res.json({
+      clusterKey: runCtx.clusterKey,
+      runningCount,
+    });
+  } catch (e) {
+    return res.status(e.status || 500).json({
+      error: e.message || "Failed to check cluster runs",
+    });
+  }
+});
+
 app.post("/start-kraken/", async (req, res) => {
   const scenario = req.body.params.scenarioChecked;
-  const isFileUpload = Boolean(req.body.params?.isFileUpload);
+
+  let runCtx;
+  try {
+    runCtx = await resolveRunContext(
+      req,
+      req.body.params || {},
+      resolveKubeconfigPathForRequest
+    );
+  } catch (e) {
+    return res.status(e.status || 500).json({
+      message: e.message,
+      status: "failed",
+    });
+  }
 
   let replayResolvedId = null;
   const rawReplay = req.body.params?.replayOfContainerId;
@@ -217,16 +303,9 @@ app.post("/start-kraken/", async (req, res) => {
     ...(replayResolvedId ? { replayOfContainerId: replayResolvedId } : {}),
   };
 
-  const kubeConfigFileLocation = resolveKubeconfigPathForRequest(isFileUpload);
-  if (!fs.existsSync(kubeConfigFileLocation)) {
-    return res.status(400).json({
-      message: `kubeconfig not found at: ${kubeConfigFileLocation}. If the file exists elsewhere in the image, CHAOS_ASSETS is wrong for this image.`,
-      status: "failed",
-    });
-  }
-
-  // kubeconfig path: KUBECONFIG_PATH when set (e.g. host path for podman-remote) and fallback to the file location above when on npm run dev
-  const kubeConfigPath = (process.env.KUBECONFIG_PATH || "").trim() || kubeConfigFileLocation;
+  const kubeConfigFileLocation = runCtx.kubeConfigFileLocation;
+  const kubeConfigPath =
+    (process.env.KUBECONFIG_PATH || "").trim() || kubeConfigFileLocation;
 
   let command = "";
   switch (scenario) {
@@ -274,6 +353,10 @@ app.post("/start-kraken/", async (req, res) => {
           replay_of_container_id:
             replayOf && String(replayOf).trim() ? String(replayOf).trim() : null,
           run_kind: runKind,
+          group_id: runCtx.groupId,
+          kubeconfig_id: runCtx.kubeconfigId,
+          started_by_user_id: runCtx.startedByUserId,
+          cluster_key: runCtx.clusterKey,
         };
         pendingRunMetadata.set(nameKey, metaObj);
         const runCid = extractPodmanRunContainerId(stdout);
@@ -287,6 +370,15 @@ app.post("/start-kraken/", async (req, res) => {
       } catch (e) {
         console.warn("[start-kraken] pendingRunMetadata:", e?.message);
       }
+      recordAudit({
+        groupId: runCtx.groupId,
+        userId: runCtx.startedByUserId,
+        action: "experiment.started",
+        resourceType: "experiment",
+        resourceId: nameKey,
+        metadata: { scenario, clusterKey: runCtx.clusterKey },
+      }).catch((e) => console.warn("[audit]", e?.message));
+
       res.status(200).json({
         message: "Successfully created the container!",
         name: req.body.params.name,
@@ -371,7 +463,20 @@ app.get("/getNamespaces", (req, res) => {
   });
 });
 
-app.get("/removePod", (req, res) => {
+app.get("/removePod", async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      await authorize(req.user, "cancel", "*");
+    }
+  } catch (e) {
+    return res.status(e.status || 403).json({ message: e.message, status: "failed" });
+  }
+  recordAudit({
+    userId: req.user.id,
+    action: "experiment.canceled",
+    resourceType: "podman",
+    resourceId: "all",
+  }).catch(() => {});
   const command = `${PODMAN} rm -af`;
   child_process.exec(command, (err, stdout, stderr) => {
     if (stdout) {
@@ -431,12 +536,36 @@ app.get("/getConfig", async (req, res) => {
 });
 app.get("/getResults", async (req, res) => {
   try {
-    const result = await getResults();
+    const groupIds = filterGroupIdsForUser(req.user);
+    const rows =
+      groupIds === null
+        ? await getResults()
+        : await getDetailsForAnalytics({ groupIds });
+    const result = { status: 200, message: rows };
     return res.json(result);
   } catch (error) {
     return res.json(error);
   }
 });
+
+async function enrichRunRowWithUser(row) {
+  const base = enrichRunRow(row);
+  if (!base) return base;
+  let startedByUsername = null;
+  if (row.started_by_user_id) {
+    const u = await findUserById(row.started_by_user_id);
+    startedByUsername = u?.username ?? null;
+  }
+  return {
+    ...base,
+    groupId: row.group_id ?? null,
+    groupName: row.group_name ?? null,
+    kubeconfigId: row.kubeconfig_id ?? null,
+    clusterKey: row.cluster_key ?? null,
+    startedByUserId: row.started_by_user_id ?? null,
+    startedByUsername,
+  };
+}
 
 app.post("/past-runs/allocate-replay-name", async (req, res) => {
   try {
@@ -444,7 +573,14 @@ app.post("/past-runs/allocate-replay-name", async (req, res) => {
     if (stem == null || String(stem).trim() === "") {
       return res.status(400).json({ error: "baseStem is required" });
     }
-    const name = await allocateUniqueReplayDisplayName(String(stem));
+    const groupIds = resolvePastRunsGroupIds(
+      req.user,
+      req.body?.groupId ?? ""
+    );
+    if (Array.isArray(groupIds) && groupIds.length === 0) {
+      return res.status(403).json({ error: "Invalid or unauthorized group" });
+    }
+    const name = await allocateUniqueReplayDisplayName(String(stem), groupIds);
     return res.json({ name });
   } catch (err) {
     console.error("allocate-replay-name:", err);
@@ -460,11 +596,21 @@ app.get("/past-runs/:containerId", async (req, res) => {
     if (!id || typeof id !== "string") {
       return res.status(400).json({ error: "Invalid container id" });
     }
-    const row = await getDetailsByContainerId(id);
+    const groupIds = filterGroupIdsForUser(req.user);
+    const row = await getDetailsByContainerId(id, groupIds);
     if (!row) {
       return res.status(404).json({ error: "Run not found" });
     }
-    return res.json({ run: enrichRunRow(row) });
+    if (row.group_id) {
+      recordAudit({
+        groupId: row.group_id,
+        userId: req.user.id,
+        action: "past_run.viewed",
+        resourceType: "past_run",
+        resourceId: id,
+      }).catch(() => {});
+    }
+    return res.json({ run: await enrichRunRowWithUser(row) });
   } catch (err) {
     console.error("past-runs get:", err);
     return res
@@ -486,13 +632,39 @@ app.post("/past-runs", async (req, res) => {
       sortBy = "finishedAt",
       sortDir = "desc",
       focusContainerId = "",
+      groupId: filterGroupId = "",
       page = 1,
       perPage = 25,
     } = req.body || {};
+    const groupIds = resolvePastRunsGroupIds(req.user, filterGroupId);
+    if (Array.isArray(groupIds) && groupIds.length === 0) {
+      return res.json({
+        stats: { total: 0, passes: 0, fails: 0, passPercent: 0 },
+        groups: [],
+        pagination: {
+          page: 1,
+          perPage: 25,
+          itemCount: 0,
+          totalPages: 1,
+        },
+        filters: {
+          nameRegex,
+          imageContains,
+          startDate,
+          endDate,
+          outcome,
+          runKind,
+          sortBy: sortBy === "name" ? "name" : "finishedAt",
+          sortDir: sortDir === "asc" ? "asc" : "desc",
+          groupId: filterGroupId ? String(filterGroupId) : "",
+        },
+      });
+    }
     let rows = await getDetailsForAnalytics({
       startDate,
       endDate,
       imageContains,
+      groupIds,
     });
     const nameFilter = filterByNameRegex(rows, nameRegex);
     if (nameFilter.error) {
@@ -503,10 +675,12 @@ app.post("/past-runs", async (req, res) => {
     rows = nameFilter.rows;
     rows = filterRowsByRunKind(rows, runKind);
     const stats = computeStats(rows);
-    const tableRows = filterRowsByOutcome(rows, outcome).map((r) => ({
-      ...enrichRunRow(r),
-      outcome: rowOutcome(r),
-    }));
+    const tableRows = await Promise.all(
+      filterRowsByOutcome(rows, outcome).map(async (r) => ({
+        ...(await enrichRunRowWithUser(r)),
+        outcome: rowOutcome(r),
+      }))
+    );
     const safeSortBy =
       sortBy === "name" || sortBy === "finishedAt" ? sortBy : "finishedAt";
     const safeSortDir =
@@ -557,6 +731,7 @@ app.post("/past-runs", async (req, res) => {
         runKind,
         sortBy: safeSortBy,
         sortDir: safeSortDir,
+        groupId: filterGroupId ? String(filterGroupId) : "",
       },
     });
   } catch (err) {
@@ -717,15 +892,16 @@ const uploadFiles = (req, res) => {
   res.json({ status: "200", message: "Successfully uploaded the file" });
 };
 
-const handleFileUploadError = (error, req, res) => {
-  res.json({ status: "400", message: "Error while uploading the file" });
-};
-app.post(
-  "/uploadFile",
-  upload.single("files"),
-  uploadFiles,
-  handleFileUploadError
-);
+app.post("/uploadFile", (req, res) => {
+  upload.single("files")(req, res, (err) => {
+    if (err) {
+      return res
+        .status(400)
+        .json({ status: "400", message: "Error while uploading the file" });
+    }
+    uploadFiles(req, res);
+  });
+});
 
 app.get("/grafana-dashboard-index", async (req, res) => {
   const baseUrl = req.query.baseUrl;

@@ -9,6 +9,23 @@ export const getUrl = () => {
 
 const baseURL = getUrl();
 
-const axiosInstance = axios.create({ responseType: "json", baseURL });
+const axiosInstance = axios.create({
+  responseType: "json",
+  baseURL,
+  withCredentials: true,
+});
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && typeof window !== "undefined") {
+      const path = window.location.pathname || "";
+      if (!path.includes("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default axiosInstance;
