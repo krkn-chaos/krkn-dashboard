@@ -1,0 +1,94 @@
+name: Create Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: read-all
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate previous tag
+        run: |
+          git fetch --tags origin
+          # Sort tags by version name and find the closest one that does not equal the current tag
+          CURRENT="${{ github.ref_name }}"
+          PREVIOUS_TAG=$(git tag --list 'v*' --sort=-v:refname | grep -vx "$CURRENT" | head -n 1 || true)
+          echo "Previous tag: $PREVIOUS_TAG"
+          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> "$GITHUB_ENV"
+
+      - name: Generate release notes from template
+        id: release-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PREVIOUS_TAG" ]; then
+            NOTES=$(gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              /repos/${{ github.repository }}/releases/generate-notes \
+              -f "tag_name=${{ github.ref_name }}" \
+              -f "target_commitish=main" \
+              -f "previous_tag_name=$PREVIOUS_TAG" | jq -er '.body')
+          else
+            NOTES=$(gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              /repos/${{ github.repository }}/releases/generate-notes \
+              -f "tag_name=${{ github.ref_name }}" \
+              -f "target_commitish=main" | jq -er '.body')
+          fi
+
+          if [ -z "$NOTES" ] || [ "$NOTES" = "null" ]; then
+            echo "Error: Generated release notes are empty or invalid!" >&2
+            exit 1
+          fi
+
+          # Write notes to temporary file to avoid shell expansion limits or syntax breaks
+          echo "$NOTES" > temp-notes.txt
+
+      - name: Replace placeholders in template
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # Use Node.js for safe file reading and replacement to handle multiline notes without bash breaking
+          node -e "
+            const fs = require('fs');
+            let template = fs.readFileSync('.github/release-template.md', 'utf8');
+            const notes = fs.readFileSync('temp-notes.txt', 'utf8');
+            template = template.replace('{VERSION}', process.env.VERSION).replace('{CHANGES}', notes);
+            fs.writeFileSync('release-notes.md', template);
+          "
+          rm temp-notes.txt
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create ${{ github.ref_name }} --title "${{ github.ref_name }}" -F release-notes.md
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          format: cyclonedx-json
+          output-file: sbom.json
+
+      - name: Upload SBOM to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload ${{ github.ref_name }} sbom.json --clobber
