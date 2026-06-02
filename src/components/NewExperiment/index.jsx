@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardBody,
+  ExpandableSection,
   Form,
   FormGroup,
   Grid,
@@ -24,7 +25,7 @@ import KubeconfigSelect from "@/components/molecules/KubeconfigSelect";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import API from "@/utils/axiosInstance";
 import { extractReplayBaseStem } from "@/utils/replayNaming";
-import { paramsList } from "./experimentFormData";
+import { paramsList, globalParamsData } from "./experimentFormData";
 import { setActiveGroupId } from "@/actions/authActions";
 import { showToast } from "@/actions/toastActions";
 import { startKraken, updateScenarioChecked } from "@/actions/newExperiment";
@@ -163,6 +164,25 @@ const NewExperiment = () => {
     },
   });
 
+  const initGlobalData = () => {
+    const defaults = {};
+    globalParamsData.forEach((cat) => {
+      cat.fields.forEach((field) => {
+        defaults[field.key] = field.defaultValue;
+      });
+    });
+    return defaults;
+  };
+
+  const [globalData, setGlobalData] = useState(initGlobalData());
+
+  const globalChangeHandler = (_event, value, key) => {
+    setGlobalData((prevState) => ({
+      ...prevState,
+      [key]: value,
+    }));
+  };
+
   useEffect(() => {
     if (replayAppliedRef.current) return;
     const replay = location.state?.replay;
@@ -189,12 +209,19 @@ const NewExperiment = () => {
     const stem = extractReplayBaseStem(stored.name);
     (async () => {
       try {
-        const { data } = await API.post("/past-runs/allocate-replay-name", {
+        const { data: replayResponse } = await API.post("/past-runs/allocate-replay-name", {
           baseStem: stem,
           groupId: targetGroupId || activeGroupId || undefined,
         });
-        const allocatedName = data?.name;
+        const allocatedName = replayResponse?.name;
         if (!allocatedName) throw new Error("No name returned");
+
+        if (stored.globalParams) {
+          setGlobalData(stored.globalParams);
+        } else {
+          setGlobalData(initGlobalData());
+        }
+
         setData((prev) => ({
           ...prev,
           [scenario]: {
@@ -267,6 +294,7 @@ const NewExperiment = () => {
     if (kubeconfigSelection && kubeconfigSelection !== "legacy") {
       payload = { ...payload, kubeconfigId: parseInt(kubeconfigSelection, 10) };
     }
+    payload.globalParams = globalData;
     return payload;
   };
 
@@ -464,6 +492,39 @@ const NewExperiment = () => {
                   </GridItem>
                 );
               })}
+
+            {/* Global Scenario Variables Collapsible Section */}
+            <GridItem span={12} className="new-experiment__global-section-wrapper pf-v5-u-mt-md">
+              <ExpandableSection toggleText="Global Scenario Variables" displaySize="large">
+                <Grid hasGutter className="pf-v5-u-mt-md">
+                  {globalParamsData.map((category) => (
+                    <GridItem span={12} key={category.category} className="new-experiment__global-category-item">
+                      <ExpandableSection toggleText={category.category}>
+                        <Grid hasGutter className="pf-v5-u-mt-md pf-v5-u-p-md" style={{ backgroundColor: "var(--pf-v5-global--BackgroundColor--light-100)", borderRadius: "4px" }}>
+                          {category.fields.map((field) => (
+                            <GridItem span={6} key={field.key}>
+                              <FormGroup
+                                label={field.label}
+                                fieldId={field.key}
+                                helperText={field.helperText}
+                              >
+                                <TextInput
+                                  type="text"
+                                  id={field.key}
+                                  name={field.key}
+                                  value={globalData[field.key] ?? ""}
+                                  onChange={(evt, val) => globalChangeHandler(evt, val, field.key)}
+                                />
+                              </FormGroup>
+                            </GridItem>
+                          ))}
+                        </Grid>
+                      </ExpandableSection>
+                    </GridItem>
+                  ))}
+                </Grid>
+              </ExpandableSection>
+            </GridItem>
           </Grid>
           <ActionGroup className="action-group-wrapper">
             <TextButton
