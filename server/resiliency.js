@@ -63,12 +63,14 @@ function normalizeScenarioListReport(payload) {
     }
     const b = s.breakdown;
     if (b && typeof b === "object") {
-      if (isFiniteNumber(b.passed)) {
-        passed += b.passed;
+      const hasPassed = isFiniteNumber(b.passed);
+      const hasFailed = isFiniteNumber(b.failed);
+      if (hasPassed || hasFailed) {
+        const p = hasPassed ? b.passed : 0;
+        const f = hasFailed ? b.failed : 0;
+        passed += p;
+        total += p + f;
         sawBreakdown = true;
-      }
-      if (isFiniteNumber(b.failed)) {
-        total += b.passed + b.failed;
       }
     }
   }

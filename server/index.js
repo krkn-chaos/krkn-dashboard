@@ -8,6 +8,7 @@ import {
   getDetailsByContainerId,
   getDetailsForAnalytics,
   getResults,
+  initDatabase,
   resolveReplayRootContainerId,
   saveConfig,
   savePodDetails,
@@ -48,6 +49,9 @@ const __dirname = path.dirname(__filename); // get the name of the directory
 
 const PORT = 8000;
 const app = express();
+
+// Ensure the SQLite schema/migrations are in place before serving requests.
+initDatabase();
 
 app.use(cors());
 app.use(express.json());

@@ -46,12 +46,21 @@ export const db = new sqlite3.Database(
   }
 );
 
-db.exec(`CREATE TABLE IF NOT EXISTS config (
+let databaseInitialized = false;
+
+// Create tables and apply column migrations for existing DBs.
+// Idempotent: CREATE TABLE IF NOT EXISTS and the ALTERs swallow "duplicate
+// column" errors, so this is safe to call more than once.
+export function initDatabase() {
+  if (databaseInitialized) return db;
+  databaseInitialized = true;
+
+  db.exec(`CREATE TABLE IF NOT EXISTS config (
     id INTEGER PRIMARY KEY,
     name varchar(50),
     params json
   );`);
-db.exec(`CREATE TABLE IF NOT EXISTS details (
+  db.exec(`CREATE TABLE IF NOT EXISTS details (
     container_id varchar(250) PRIMARY KEY,
     image varchar(150),
     mounts varchar(100),
@@ -61,37 +70,43 @@ db.exec(`CREATE TABLE IF NOT EXISTS details (
     content TEXT
   );`);
 
-// Add stored_at for ordering (existing DBs)
-db.run("ALTER TABLE details ADD COLUMN stored_at TEXT", (e) => {
-  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
-    console.warn("[db] ALTER TABLE details ADD COLUMN stored_at:", e?.message);
-  }
-});
+  // Add stored_at for ordering (existing DBs)
+  db.run("ALTER TABLE details ADD COLUMN stored_at TEXT", (e) => {
+    if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+      console.warn("[db] ALTER TABLE details ADD COLUMN stored_at:", e?.message);
+    }
+  });
 
-db.run("ALTER TABLE details ADD COLUMN scenario_params TEXT", (e) => {
-  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
-    console.warn("[db] ALTER TABLE details ADD COLUMN scenario_params:", e?.message);
-  }
-});
+  db.run("ALTER TABLE details ADD COLUMN scenario_params TEXT", (e) => {
+    if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+      console.warn("[db] ALTER TABLE details ADD COLUMN scenario_params:", e?.message);
+    }
+  });
 
-db.run("ALTER TABLE details ADD COLUMN replay_of_container_id TEXT", (e) => {
-  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
-    console.warn("[db] ALTER TABLE details ADD COLUMN replay_of_container_id:", e?.message);
-  }
-});
+  db.run("ALTER TABLE details ADD COLUMN replay_of_container_id TEXT", (e) => {
+    if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+      console.warn("[db] ALTER TABLE details ADD COLUMN replay_of_container_id:", e?.message);
+    }
+  });
 
-db.run("ALTER TABLE details ADD COLUMN run_kind TEXT DEFAULT 'original'", (e) => {
-  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
-    console.warn("[db] ALTER TABLE details ADD COLUMN run_kind:", e?.message);
-  }
-});
+  db.run("ALTER TABLE details ADD COLUMN run_kind TEXT DEFAULT 'original'", (e) => {
+    if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+      console.warn("[db] ALTER TABLE details ADD COLUMN run_kind:", e?.message);
+    }
+  });
 
-// Normalized resiliency score (JSON) parsed from captured run logs
-db.run("ALTER TABLE details ADD COLUMN resiliency_report TEXT", (e) => {
-  if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
-    console.warn("[db] ALTER TABLE details ADD COLUMN resiliency_report:", e?.message);
-  }
-});
+  // Normalized resiliency score (JSON) parsed from captured run logs
+  db.run("ALTER TABLE details ADD COLUMN resiliency_report TEXT", (e) => {
+    if (e && !/duplicate column name/i.test(String(e?.message || ""))) {
+      console.warn("[db] ALTER TABLE details ADD COLUMN resiliency_report:", e?.message);
+    }
+  });
+
+  return db;
+}
+
+// Initialize on import so modules that pull in db helpers find the schema ready.
+initDatabase();
 
 // Database functions
 export const saveConfig = (name, params) => {

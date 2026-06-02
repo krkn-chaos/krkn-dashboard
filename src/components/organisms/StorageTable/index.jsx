@@ -100,7 +100,7 @@ const StorageTable = () => {
                 </Tr>
                 {doc.config && isRunExpanded(doc) ? (
                   <Tr isExpanded={isRunExpanded(doc)}>
-                    <Td colSpan={8}>
+                    <Td colSpan={7}>
                       <ExpandableRowContent>
                         <Grid hasGutter className="metrics-expanded-row">
                           <GridItem span={6}>
