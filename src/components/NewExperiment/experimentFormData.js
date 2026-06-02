@@ -570,6 +570,7 @@ export const paramsList = {
     },
   ],
   "zone-outages": [
+  "kubevirt-outage": [
     {
       key: "name",
       label: "Name",
@@ -625,6 +626,35 @@ export const paramsList = {
       ariaDescribedby: "default acl id",
       helperText:
         "Optional AWS-only: reuse an existing network ACL instead of creating one",
+      key: "namespace",
+      label: "Namespace",
+      fieldId: "namespace-id",
+      ariaDescribedby: "namespace",
+      helperText: "Namespace where the target VM is running",
+      isRequired: true,
+    },
+    {
+      key: "vm_name",
+      label: "VM Name",
+      fieldId: "vm_name-id",
+      ariaDescribedby: "vm name",
+      helperText: "Name of the VM (VMI) to delete. Supports regex matching",
+      isRequired: true,
+    },
+    {
+      key: "timeout",
+      label: "Timeout",
+      fieldId: "timeout-id",
+      ariaDescribedby: "timeout",
+      helperText: "Seconds to wait for the VM to start running again",
+      isRequired: false,
+    },
+    {
+      key: "kill_count",
+      label: "Kill Count",
+      fieldId: "kill_count-id",
+      ariaDescribedby: "kill count",
+      helperText: "Number of VMs to kill serially",
       isRequired: false,
     },
   ],

@@ -19,10 +19,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import KubeconfigFileUpload from "@/components/molecules/FileUpload";
+import GroupSelect from "@/components/molecules/GroupSelect";
+import KubeconfigSelect from "@/components/molecules/KubeconfigSelect";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import API from "@/utils/axiosInstance";
 import { extractReplayBaseStem } from "@/utils/replayNaming";
 import { paramsList } from "./experimentFormData";
+import { setActiveGroupId } from "@/actions/authActions";
 import { showToast } from "@/actions/toastActions";
 import { startKraken, updateScenarioChecked } from "@/actions/newExperiment";
 
@@ -51,9 +54,13 @@ const NewExperiment = () => {
   const [replaySourceRunId, setReplaySourceRunId] = useState(null);
   const [replaySourceDisplayName, setReplaySourceDisplayName] = useState("");
   const [isBtnDisabled, setIsBtnDisabled] = useState(true);
+  const [kubeconfigSelection, setKubeconfigSelection] = useState("");
+  const [clusterRunWarning, setClusterRunWarning] = useState(null);
+  const [pendingStartPayload, setPendingStartPayload] = useState(null);
   const scenarioChecked = useSelector(
     (state) => state.experiment.scenarioChecked
   );
+  const activeGroupId = useSelector((state) => state.auth.activeGroupId);
 
   const [data, setData] = useState({
     "pod-scenarios": {
@@ -155,6 +162,14 @@ const NewExperiment = () => {
       default_acl_id: "",
       name: "",
       scenarioChecked: "zone-outages",
+    "kubevirt-outage": {
+      kubeconfigPath: "",
+      namespace: "default",
+      vm_name: "",
+      timeout: 60,
+      kill_count: 1,
+      name: "",
+      scenarioChecked: "kubevirt-outage",
     },
   });
 
@@ -162,6 +177,16 @@ const NewExperiment = () => {
     if (replayAppliedRef.current) return;
     const replay = location.state?.replay;
     if (!replay?.params || !replay?.sourceContainerId) return;
+
+    const targetGroupId =
+      replay.groupId != null ? parseInt(replay.groupId, 10) : null;
+    if (targetGroupId && activeGroupId !== targetGroupId) {
+      dispatch(setActiveGroupId(targetGroupId));
+      setKubeconfigSelection("");
+      return;
+    }
+    if (!activeGroupId) return;
+
     const stored = replay.params;
     const scenario = stored.scenarioChecked;
     if (!scenario || !paramsList[scenario]) {
@@ -176,6 +201,7 @@ const NewExperiment = () => {
       try {
         const { data } = await API.post("/past-runs/allocate-replay-name", {
           baseStem: stem,
+          groupId: targetGroupId || activeGroupId || undefined,
         });
         const allocatedName = data?.name;
         if (!allocatedName) throw new Error("No name returned");
@@ -209,7 +235,7 @@ const NewExperiment = () => {
         navigate(location.pathname, { replace: true, state: {} });
       }
     })();
-  }, [location.state, location.pathname, navigate, dispatch]);
+  }, [location.state, location.pathname, navigate, dispatch, activeGroupId]);
 
   useEffect(() => {
     const scenarioData = data[scenarioChecked];
@@ -230,8 +256,8 @@ const NewExperiment = () => {
       );
     });
 
-    setIsBtnDisabled(!allRequiredFilled);
-  }, [data, scenarioChecked]);
+    setIsBtnDisabled(!allRequiredFilled || !activeGroupId);
+  }, [data, scenarioChecked, activeGroupId]);
 
   const changeHandler = (_event, value, key) => {
     setData((prevState) => ({
@@ -243,15 +269,55 @@ const NewExperiment = () => {
     }));
   };
 
-  const sendData = async () => {
+  const buildStartPayload = () => {
     const base = { ...data[scenarioChecked] };
-    const payload = replaySourceRunId
+    let payload = replaySourceRunId
       ? { ...base, replayOfContainerId: replaySourceRunId }
       : base;
+    if (kubeconfigSelection && kubeconfigSelection !== "legacy") {
+      payload = { ...payload, kubeconfigId: parseInt(kubeconfigSelection, 10) };
+    }
+    return payload;
+  };
+
+  const runStartKraken = async (payload) => {
     const ok = await dispatch(startKraken(payload));
     if (ok) {
       setReplaySourceRunId(null);
       setReplaySourceDisplayName("");
+      setClusterRunWarning(null);
+      setPendingStartPayload(null);
+    }
+  };
+
+  const sendData = async () => {
+    const payload = buildStartPayload();
+    try {
+      const { data } = await API.post("/check-cluster-runs", { params: payload });
+      if ((data?.runningCount ?? 0) > 0) {
+        setClusterRunWarning({
+          runningCount: data.runningCount,
+          clusterKey: data.clusterKey,
+        });
+        setPendingStartPayload(payload);
+        return;
+      }
+    } catch (e) {
+      dispatch(
+        showToast(
+          "danger",
+          "Could not verify cluster status",
+          e?.response?.data?.error || e?.message
+        )
+      );
+      return;
+    }
+    await runStartKraken(payload);
+  };
+
+  const confirmClusterRun = async () => {
+    if (pendingStartPayload) {
+      await runStartKraken(pendingStartPayload);
     }
   };
 
@@ -315,19 +381,78 @@ const NewExperiment = () => {
                 </Alert>
               </GridItem>
             ) : null}
+            {clusterRunWarning ? (
+              <GridItem span={12}>
+                <Alert
+                  variant="warning"
+                  isInline
+                  title="Other experiments are running on this cluster"
+                  actionClose={
+                    <AlertActionCloseButton
+                      onClose={() => {
+                        setClusterRunWarning(null);
+                        setPendingStartPayload(null);
+                      }}
+                    />
+                  }
+                >
+                  <p>
+                    There {clusterRunWarning.runningCount === 1 ? "is" : "are"}{" "}
+                    <strong>{clusterRunWarning.runningCount}</strong> other
+                    experiment
+                    {clusterRunWarning.runningCount === 1 ? "" : "s"} currently
+                    running on this cluster
+                    {clusterRunWarning.clusterKey
+                      ? ` (${clusterRunWarning.clusterKey})`
+                      : ""}
+                    . Are you sure you want to continue?
+                  </p>
+                  <Button
+                    className="pf-v5-u-mt-sm"
+                    variant="primary"
+                    onClick={confirmClusterRun}
+                  >
+                    Yes, start Kraken anyway
+                  </Button>
+                </Alert>
+              </GridItem>
+            ) : null}
             <GridItem span={12}>
               <Grid hasGutter>
                 <GridItem span={6}>
-                  <FormGroup isRequired={false} label={"KUBECONFIG FILE"}>
-                    <KubeconfigFileUpload />
-                  </FormGroup>
+                  <GroupSelect
+                    onGroupChange={() => {
+                      setKubeconfigSelection("");
+                      setClusterRunWarning(null);
+                      setPendingStartPayload(null);
+                    }}
+                  />
                 </GridItem>
+                <GridItem span={6}>
+                  <KubeconfigSelect
+                    value={kubeconfigSelection}
+                    onChange={setKubeconfigSelection}
+                    allowLegacyUpload
+                  />
+                </GridItem>
+                {kubeconfigSelection === "legacy" ? (
+                  <GridItem span={12}>
+                    <FormGroup isRequired={false} label={"KUBECONFIG FILE"}>
+                      <KubeconfigFileUpload />
+                    </FormGroup>
+                  </GridItem>
+                ) : null}
               </Grid>
             </GridItem>
             {scenarioChecked &&
-              paramsList[scenarioChecked].map((item) => {
+              paramsList[scenarioChecked].map((item, index) => {
                 return (
-                  <GridItem span={6} key={item.key}>
+                  <GridItem
+                    span={6}
+                    key={`${scenarioChecked}-${item.key}`}
+                    className="new-experiment__field-enter"
+                    style={{ animationDelay: `${index * 45}ms` }}
+                  >
                     <FormGroup
                       isRequired={item.isRequired}
                       label={item.label}
