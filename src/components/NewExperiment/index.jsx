@@ -71,7 +71,6 @@ const NewExperiment = () => {
       name_pattern: ".*",
       disruption_count: 1,
       kill_timeout: 180,
-      wait_timeout: 360,
       expected_pod_count: "",
       scenarioChecked: "pod-scenarios",
       name: "",

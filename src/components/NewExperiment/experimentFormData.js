@@ -50,14 +50,6 @@ export const paramsList = {
       isRequired: false,
     },
     {
-      key: "wait_timeout",
-      label: "Wait Timeout",
-      fieldId: "wait_timeout-id",
-      ariaDescribedby: "wait timeout",
-      helperText: "",
-      isRequired: false,
-    },
-    {
       key: "expected_pod_count",
       label: "Expected POD count",
       fieldId: "expected_pod_count-id",
@@ -635,14 +627,26 @@ export const globalParamsData = [
     category: "Performance & Metrics & Resiliency & Elastic",
     fields: [
       { key: "DEPLOY_DASHBOARDS", label: "Deploy Dashboards", helperText: "Deploys mutable grafana loaded with dashboards visualizing performance metrics", defaultValue: "False" },
+      { key: "PROMETHEUS_URI", label: "Prometheus URI", helperText: "URI to Prometheus instance; auto-detected on OpenShift, required for Kubernetes", defaultValue: "" },
+      { key: "PROMETHEUS_TOKEN", label: "Prometheus Token", helperText: "Bearer token for Prometheus authentication; auto-detected on OpenShift, required for Kubernetes", defaultValue: "" },
+      { key: "UUID", label: "UUID", helperText: "UUID for the run; auto generated if not set", defaultValue: "" },
       { key: "CAPTURE_METRICS", label: "Capture Metrics", helperText: "Captures metrics as specified in the profile from in-cluster prometheus", defaultValue: "False" },
+      { key: "METRICS_PATH", label: "Metrics Path", helperText: "Path to the metrics profile to use when CAPTURE_METRICS is set", defaultValue: "config/metrics-aggregated.yaml" },
       { key: "ENABLE_ALERTS", label: "Enable Alerts", helperText: "Evaluates expressions from in-cluster prometheus and exits 0 or 1", defaultValue: "False" },
       { key: "ALERTS_PATH", label: "Alerts Path", helperText: "Path to the alerts file to use when ENABLE_ALERTS is set", defaultValue: "config/alerts" },
       { key: "CHECK_CRITICAL_ALERTS", label: "Check Critical Alerts", helperText: "When enabled will check prometheus for critical alerts firing post chaos", defaultValue: "False" },
       { key: "RESILIENCY_RUN_MODE", label: "Resiliency Run Mode", helperText: "Resiliency scoring mode: standalone, detailed, or disabled", defaultValue: "standalone" },
       { key: "RESILIENCY_FILE", label: "Resiliency File", helperText: "Path to a YAML file containing SLO definitions", defaultValue: "config/alerts.yaml" },
-      { key: "ELASTIC_SERVER", label: "Elastic Server", helperText: "URL of the Elasticsearch instance to store telemetry data", defaultValue: "" },
-      { key: "ELASTIC_INDEX", label: "Elastic Index", helperText: "Elasticsearch index pattern to post results to", defaultValue: "" }
+      { key: "ENABLE_ES", label: "Enable ES", helperText: "Enable Elasticsearch integration", defaultValue: "False" },
+      { key: "ES_VERIFY_CERTS", label: "ES Verify Certs", helperText: "Verify SSL certificates when connecting to Elasticsearch", defaultValue: "True" },
+      { key: "ES_SERVER", label: "ES Server", helperText: "URL of the Elasticsearch instance", defaultValue: "" },
+      { key: "ES_PORT", label: "ES Port", helperText: "Port of the Elasticsearch instance", defaultValue: "" },
+      { key: "ES_USERNAME", label: "ES Username", helperText: "Username for Elasticsearch authentication", defaultValue: "" },
+      { key: "ES_PASSWORD", label: "ES Password", helperText: "Password for Elasticsearch authentication", defaultValue: "" },
+      { key: "ES_METRICS_INDEX", label: "ES Metrics Index", helperText: "Elasticsearch index for metrics data", defaultValue: "" },
+      { key: "ES_ALERTS_INDEX", label: "ES Alerts Index", helperText: "Elasticsearch index for alerts data", defaultValue: "" },
+      { key: "ES_TELEMETRY_INDEX", label: "ES Telemetry Index", helperText: "Elasticsearch index for telemetry data", defaultValue: "" },
+      { key: "ES_RUN_TAG", label: "ES Run Tag", helperText: "Tag to identify the run in Elasticsearch", defaultValue: "" }
     ]
   },
   {
@@ -657,7 +661,7 @@ export const globalParamsData = [
       { key: "KUBE_VIRT_FAILURES", label: "Kube Virt Failures", helperText: "If True, will only report when ssh connections fail to VMI", defaultValue: "" },
       { key: "KUBE_VIRT_DISCONNECTED", label: "Kube Virt Disconnected", helperText: "Use disconnected check by passing cluster API", defaultValue: "False" },
       { key: "KUBE_VIRT_NODE_NAME", label: "Kube Virt Node Name", helperText: "If set, will filter VMs to only track ones running on the specified node", defaultValue: "" },
-      { key: "KUBE_VIRT_EXIT_ON_FAIL", label: "Kube Virt Exit On Fail", helperText: "Fails run if VMs still have false status at end of run", defaultValue: "" },
+      { key: "KUBE_VIRT_EXIT_ON_FAILURE", label: "Kube Virt Exit On Failure", helperText: "Fails run if VMs still have false status at end of run", defaultValue: "False" },
       { key: "KUBE_VIRT_SSH_NODE", label: "Kube Virt SSH Node", helperText: "If set, will be a backup way to SSH to a node", defaultValue: "" }
     ]
   },
@@ -669,7 +673,7 @@ export const globalParamsData = [
       { key: "TELEMETRY_USERNAME", label: "Telemetry Username", helperText: "Telemetry service username", defaultValue: "redhat-chaos" },
       { key: "TELEMETRY_PASSWORD", label: "Telemetry Password", helperText: "Telemetry service password", defaultValue: "" },
       { key: "TELEMETRY_PROMETHEUS_BACKUP", label: "Telemetry Prometheus Backup", helperText: "Enables/disables prometheus data collection", defaultValue: "True" },
-      { key: "TELEMTRY_FULL_PROMETHEUS_BACKUP", label: "Telemetry Full Prometheus Backup", helperText: "If set to False only the /prometheus/wal folder will be downloaded", defaultValue: "False" },
+      { key: "TELEMETRY_FULL_PROMETHEUS_BACKUP", label: "Telemetry Full Prometheus Backup", helperText: "If set to False only the /prometheus/wal folder will be downloaded", defaultValue: "False" },
       { key: "TELEMETRY_BACKUP_THREADS", label: "Telemetry Backup Threads", helperText: "Number of telemetry download/upload threads", defaultValue: "5" },
       { key: "TELEMETRY_ARCHIVE_PATH", label: "Telemetry Archive Path", helperText: "Local path where the archive files will be temporarily stored", defaultValue: "/tmp" },
       { key: "TELEMETRY_MAX_RETRIES", label: "Telemetry Max Retries", helperText: "Maximum number of upload retries (if 0 will retry forever)", defaultValue: "0" },
@@ -677,7 +681,8 @@ export const globalParamsData = [
       { key: "TELEMETRY_GROUP", label: "Telemetry Group", helperText: "If set will archive the telemetry in the S3 bucket on a folder named after the value", defaultValue: "default" },
       { key: "TELEMETRY_ARCHIVE_SIZE", label: "Telemetry Archive Size", helperText: "The size of the prometheus data archive in KB", defaultValue: "1000" },
       { key: "TELEMETRY_LOGS_BACKUP", label: "Telemetry Logs Backup", helperText: "Logs backup to S3", defaultValue: "False" },
-      { key: "TELEMETRY_FILTER_PATTER", label: "Telemetry Filter Pattern", helperText: "Filter logs based on certain timestamp patterns", defaultValue: "" },
+      { key: "TELEMETRY_EVENTS_BACKUP", label: "Telemetry Events Backup", helperText: "Enables/disables events backup to S3", defaultValue: "False" },
+      { key: "TELEMETRY_FILTER_PATTERN", label: "Telemetry Filter Pattern", helperText: "Filter logs based on certain timestamp patterns", defaultValue: "" },
       { key: "TELEMETRY_CLI_PATH", label: "Telemetry CLI Path", helperText: "OC CLI path, if not specified will be searched in $PATH", defaultValue: "" }
     ]
   }
