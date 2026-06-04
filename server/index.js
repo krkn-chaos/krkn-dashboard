@@ -272,6 +272,18 @@ app.post("/check-cluster-runs", async (req, res) => {
 app.post("/start-kraken/", async (req, res) => {
   const scenario = req.body.params.scenarioChecked;
 
+  const globalParams = req.body.params?.globalParams;
+  const customEnv = { ...process.env };
+  let globalEnvFlags = "";
+  if (globalParams && typeof globalParams === "object") {
+    for (const [key, value] of Object.entries(globalParams)) {
+      if (value !== undefined && value !== null && value.toString().trim() !== "") {
+        customEnv[key] = String(value);
+        globalEnvFlags += ` --env ${key}`;
+      }
+    }
+  }
+
   let runCtx;
   try {
     runCtx = await resolveRunContext(
@@ -311,7 +323,7 @@ app.post("/start-kraken/", async (req, res) => {
   let command = "";
   switch (scenario) {
     case "pod-scenarios":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env WAIT_DURATION=${req.body.params.wait_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:pod-scenarios`;
+      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:pod-scenarios`;
       break;
     case "container-scenarios":
       command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:container-scenarios`;
@@ -340,11 +352,15 @@ app.post("/start-kraken/", async (req, res) => {
     default:
       command = `echo 'No scenario selected'`;
   }
+  if (globalEnvFlags && command.startsWith(`${PODMAN} run`)) {
+    command = command.replace(`${PODMAN} run`, `${PODMAN} run${globalEnvFlags}`);
+  }
   console.log(command);
   // Podman prints pull/progress to stderr; a non-empty stderr is normal. Only treat
   // non-zero exit (err) as failure. Use a large buffer so first-time image pulls don't
   // hit ERR_CHILD_PROCESS_STDIO_MAXBUFFER.
-  child_process.exec(command, EXEC_LARGE_MAX_BUFFER, (err, stdout, stderr) => {
+  const execOptions = { ...EXEC_LARGE_MAX_BUFFER, env: customEnv };
+  child_process.exec(command, execOptions, (err, stdout, stderr) => {
     if (!err) {
       const params = paramsForMeta || {};
       const replayOf = params.replayOfContainerId;
