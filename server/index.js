@@ -320,37 +320,56 @@ app.post("/start-kraken/", async (req, res) => {
   const kubeConfigPath =
     (process.env.KUBECONFIG_PATH || "").trim() || kubeConfigFileLocation;
 
+  // Keys from req.body.params that are dashboard metadata, not krkn env vars.
+  const NON_ENV_PARAMS = new Set([
+    "name", "scenarioChecked", "globalParams",
+    "kubeconfigId", "groupId", "isFileUpload", "replayOfContainerId",
+  ]);
+
+  // Dashboard field keys whose env var name differs from key.toUpperCase().
+  const KEY_TO_ENV = {
+    node_selectors: "NODE_SELECTOR",
+  };
+
+  // Scenarios that need --env-host (pass the full host environment).
+  const SCENARIOS_WITH_ENV_HOST = new Set(["pvc-scenarios"]);
+
+  // Scenarios that require private SELinux relabeling (:Z) on the kubeconfig volume.
+  // All others use shared relabeling (:z).
+  const SCENARIOS_WITH_VOLUME_Z = new Set([
+    "pvc-scenarios", "node-scenarios", "time-scenarios",
+    "kubevirt-outage", "namespace-scenarios", "power-outages",
+  ]);
+
+  const KNOWN_SCENARIOS = new Set([
+    "pod-scenarios", "container-scenarios", "namespace-scenarios",
+    "node-scenarios", "pvc-scenarios", "time-scenarios", "power-outages",
+    "node-cpu-hog", "node-io-hog", "node-memory-hog", "kubevirt-outage",
+  ]);
+
+  // Build --env flags generically from all non-metadata params.
+  // Converting dashboard snake_case keys to UPPER_SNAKE_CASE env var names means
+  // any field added to experimentFormData.js is automatically forwarded.
+  function buildScenarioEnvFlags(params) {
+    let flags = "";
+    for (const [key, value] of Object.entries(params)) {
+      if (NON_ENV_PARAMS.has(key)) continue;
+      const str = value === undefined || value === null ? "" : String(value).trim();
+      if (!str) continue;
+      const envKey = KEY_TO_ENV[key] ?? key.replace(/-/g, "_").toUpperCase();
+      flags += ` --env ${envKey}=${str}`;
+    }
+    return flags;
+  }
+
   let command = "";
-  switch (scenario) {
-    case "pod-scenarios":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env NAMESPACE=${req.body.params.namespace} --env NAME_PATTERN=${req.body.params.name_pattern} --env POD_LABEL=${req.body.params.pod_label} --env DISRUPTION_COUNT=${req.body.params.disruption_count}  --env KILL_TIMEOUT=${req.body.params.kill_timeout} --env EXPECTED_POD_COUNT=${req.body.params.expected_pod_count} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:pod-scenarios`;
-      break;
-    case "container-scenarios":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env NAMESPACE=${req.body.params.namespace} --env LABEL_SELECTOR=${req.body.params.label_selector} --env DISRUPTION_COUNT=${req.body.params.disruption_count} --env CONTAINER_NAME=${req.body.params.container_name} --env ACTION=${req.body.params.action} --env EXPECTED_RECOVERY_TIME=${req.body.params.expected_recovery_time} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:container-scenarios`;
-      break;
-    case "node-cpu-hog":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env NODE_CPU_CORE=${req.body.params.node_cpu_core} --env NODE_CPU_PERCENTAGE=${req.body.params.node_cpu_percentage} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors}  --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-cpu-hog`;
-      break;
-    case "node-io-hog":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env IO_BLOCK_SIZE=${req.body.params.io_block_size} --env IO_WORKERS=${req.body.params.io_workers} --env IO_WRITE_BYTES=${req.body.params.io_write_bytes} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-io-hog`;
-      break;
-    case "node-memory-hog":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env TOTAL_CHAOS_DURATION=${req.body.params.total_chaos_duration} --env MEMORY_CONSUMPTION_PERCENTAGE=${req.body.params.memory_consumption_percentage} --env NUMBER_OF_WORKERS=${req.body.params.number_of_workers} --env NAMESPACE=${req.body.params.namespace} --env NODE_SELECTORS=${req.body.params.node_selectors} --name=${req.body.params.name} --net=host  -v ${kubeConfigPath}:/home/krkn/.kube/config:z -d quay.io/krkn-chaos/krkn-hub:node-memory-hog`;
-      break;
-    case "pvc-scenarios":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env PVC_NAME=${req.body.params.pvc_name} --env POD_NAME=${req.body.params.pod_name} --env NAMESPACE=${req.body.params.namespace} --env FILL_PERCENTAGE=${req.body.params.fill_percentage} --env DURATION=${req.body.params.duration} --env BLOCK_SIZE=${req.body.params.block_size} --name=${req.body.params.name} --net=host --env-host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:pvc-scenarios`;
-      break;
-    case "node-scenarios":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env ACTION=${req.body.params.action} --env CLOUD_TYPE=${req.body.params.cloud_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NODE_NAME=${req.body.params.node_name} --env INSTANCE_COUNT=${req.body.params.instance_count} --env RUNS=${req.body.params.runs} --env TIMEOUT=${req.body.params.timeout} --env DURATION=${req.body.params.duration} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:node-scenarios`;
-      break;
-    case "time-scenarios":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env OBJECT_TYPE=${req.body.params.object_type} --env LABEL_SELECTOR=${req.body.params.label_selector} --env NAMESPACE=${req.body.params.namespace} --env ACTION=${req.body.params.action} --env OBJECT_NAME=${req.body.params.object_name} --env CONTAINER_NAME=${req.body.params.container_name} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:time-scenarios`;
-      break;
-    case "kubevirt-outage":
-      command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX} --env NAMESPACE=${req.body.params.namespace} --env VM_NAME=${req.body.params.vm_name} --env TIMEOUT=${req.body.params.timeout} --env KILL_COUNT=${req.body.params.kill_count} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:Z -d quay.io/krkn-chaos/krkn-hub:kubevirt-outage`;
-      break;
-    default:
-      command = `echo 'No scenario selected'`;
+  if (!KNOWN_SCENARIOS.has(scenario)) {
+    command = `echo 'No scenario selected'`;
+  } else {
+    const envFlags = buildScenarioEnvFlags(req.body.params);
+    const envHost = SCENARIOS_WITH_ENV_HOST.has(scenario) ? " --env-host" : "";
+    const volLabel = SCENARIOS_WITH_VOLUME_Z.has(scenario) ? "Z" : "z";
+    command = `${PODMAN} run ${PODMAN_RUN_PLATFORM_PREFIX}${envFlags}${envHost} --name=${req.body.params.name} --net=host -v ${kubeConfigPath}:/home/krkn/.kube/config:${volLabel} -d quay.io/krkn-chaos/krkn-hub:${scenario}`;
   }
   if (globalEnvFlags && command.startsWith(`${PODMAN} run`)) {
     command = command.replace(`${PODMAN} run`, `${PODMAN} run${globalEnvFlags}`);

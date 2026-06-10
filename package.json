@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"nodemon --watch server server/index.js\" \"vite\"",
+    "prebuild": "node scripts/validate-params.mjs",
     "build": "vite build",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "server": "node server/index.js"
+    "server": "node server/index.js",
+    "validate-params": "node scripts/validate-params.mjs"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.0.1",
