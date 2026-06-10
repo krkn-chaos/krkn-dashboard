@@ -9,7 +9,7 @@ import {
   Thead,
   Tr,
 } from "@patternfly/react-table";
-import { Grid, GridItem } from "@patternfly/react-core";
+import { Grid, GridItem, Tooltip } from "@patternfly/react-core";
 import React, { useCallback, useState } from "react";
 
 import ConfigRow from "@/components/molecules/ConfigRow";
@@ -42,6 +42,7 @@ const StorageTable = () => {
     [expandedRunNames]
   );
   const columnNames = {
+    uuid: "UUID",
     scenario_type: "Scenario Type",
     start_time: "Start Time",
     end_time: "End Time",
@@ -85,6 +86,15 @@ const StorageTable = () => {
                         : undefined
                     }
                   />
+                  <Td>
+                    {doc.uuid ? (
+                      <Tooltip content={doc.uuid}>
+                        <span style={{ fontFamily: "monospace", cursor: "default" }}>
+                          {doc.uuid.slice(0, 8)}
+                        </span>
+                      </Tooltip>
+                    ) : "—"}
+                  </Td>
                   <Td>{doc.scenario_type}</Td>
                   <Td>{formatDateTime(doc.start_time)}</Td>
                   <Td>{formatDateTime(doc.end_time)}</Td>
@@ -95,7 +105,7 @@ const StorageTable = () => {
                 </Tr>
                 {doc.config && isRunExpanded(doc) ? (
                   <Tr isExpanded={isRunExpanded(doc)}>
-                    <Td colSpan={8}>
+                    <Td colSpan={9}>
                       <ExpandableRowContent>
                         <Grid hasGutter className="metrics-expanded-row">
                           <GridItem span={6}>

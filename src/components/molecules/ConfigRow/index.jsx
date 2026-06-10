@@ -54,13 +54,27 @@ const ConfigRow = (props) => {
         >
           <Thead>
             <Tr>
-              <Th width={10} style={{ textAlign: "left" }}>
+              <Th style={{ textAlign: "left", width: "30%" }}>
                 {columnNames.key}
               </Th>
-              <Th width={10}>{columnNames.value}</Th>
+              <Th>{columnNames.value}</Th>
             </Tr>
           </Thead>
           <Tbody>
+            {doc.uuid && (
+              <Tr>
+                <Td>UUID</Td>
+                <Td style={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                  {doc.uuid}
+                </Td>
+              </Tr>
+            )}
+            {doc.resiliency_score != null && (
+              <Tr>
+                <Td>Resiliency Score</Td>
+                <Td>{doc.resiliency_score.toFixed(2)}</Td>
+              </Tr>
+            )}
             {Object.keys(doc.config)
               .filter((key) => key !== "id")
               .map((key) => renderConfigValue(key, doc.config[key]))}
