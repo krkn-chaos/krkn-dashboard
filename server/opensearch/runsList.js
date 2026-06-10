@@ -139,6 +139,7 @@ export class ElasticRunListService {
       cluster_version,
       kubernetes_objects_count,
       run_uuid,
+      overall_resiliency_report,
     } = source;
 
     const scenario = scenarios[0] || {};
@@ -147,6 +148,7 @@ export class ElasticRunListService {
     const parsedData = {
       id,
       uuid: run_uuid,
+      resiliency_score: overall_resiliency_report?.resiliency_score ?? null,
       timestamp: timestamp || atTimestamp || new Date().toISOString(),
       start_time: start_timestamp || new Date().toISOString(),
       end_time: end_timestamp || new Date().toISOString(),
