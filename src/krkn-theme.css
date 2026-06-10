@@ -1,0 +1,64 @@
+/* ────────────────────────────────────────────────
+   krkn brand tokens
+   Aligned with https://github.com/krkn-chaos/krkn-operator
+──────────────────────────────────────────────── */
+:root {
+  --krkn-red:           #EC1C24;
+  --krkn-red-dark:      #9B1C1F;
+  --krkn-navy:          #0E58A0;
+  --krkn-navy-light:    #3B82F6;
+  --krkn-dark-bg:       #111827;
+  --krkn-surface:       #1A2332;
+  --krkn-border:        #334155;
+  --krkn-text-light:    #F8FAFC;
+  --krkn-text-muted:    #94A3B8;
+
+  /* ── PatternFly primary → krkn red ── */
+  --pf-v5-global--primary-color--100:   #EC1C24;
+  --pf-v5-global--primary-color--200:   #9B1C1F;
+  --pf-v5-global--active-color--100:    #EC1C24;
+
+  /* ── PatternFly links → krkn navy ── */
+  --pf-v5-global--link--Color:          #0E58A0;
+  --pf-v5-global--link--Color--hover:   #EC1C24;
+  --pf-v5-global--link--Color--visited: #0E58A0;
+
+  /* ── Primary button → krkn red ── */
+  --pf-v5-c-button--m-primary--BackgroundColor:       #EC1C24;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: #9B1C1F;
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: #9B1C1F;
+  --pf-v5-c-button--m-primary--active--BackgroundColor: #9B1C1F;
+  --pf-v5-c-button--m-primary--Color:                 #F8FAFC;
+
+  /* ── Side nav active indicator → krkn red ── */
+  --pf-v5-c-nav__link--m-current--after--BackgroundColor: #EC1C24;
+  --pf-v5-c-nav__link--m-current--Color:                  #EC1C24;
+  --pf-v5-c-nav__link--hover--Color:                      #EC1C24;
+  --pf-v5-c-nav__link--focus--Color:                      #EC1C24;
+
+  /* ── Checkbox / radio checked → krkn red ── */
+  --pf-v5-c-check__input--checked--BackgroundColor: #EC1C24;
+  --pf-v5-c-radio__input--checked--BackgroundColor: #EC1C24;
+
+  /* ── Tabs active indicator → krkn red ── */
+  --pf-v5-c-tabs__link--m-current--Color:                     #EC1C24;
+  --pf-v5-c-tabs__link--after--BorderColor--active:           #EC1C24;
+  --pf-v5-c-tabs__link--m-current--after--BorderColor:        #EC1C24;
+}
+
+/* Masthead: krkn dark header */
+.pf-v5-c-masthead {
+  background-color: var(--krkn-dark-bg);
+  border-bottom: 2px solid var(--krkn-red);
+  color: var(--krkn-text-light);
+}
+
+/* Masthead icons and toggle white on dark */
+.pf-v5-c-masthead .pf-v5-c-button,
+.pf-v5-c-masthead .pf-v5-c-page__header-tools-item {
+  color: var(--krkn-text-light);
+}
+
+.pf-v5-c-masthead .pf-v5-c-button:hover {
+  color: var(--krkn-red);
+}

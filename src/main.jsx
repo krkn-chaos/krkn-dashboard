@@ -1,5 +1,6 @@
 import "./index.css";
 import "@patternfly/react-core/dist/styles/base.css";
+import "./krkn-theme.css";
 
 import App from "./App.jsx";
 import { Provider } from "react-redux";
