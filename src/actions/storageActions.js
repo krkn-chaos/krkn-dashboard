@@ -40,9 +40,11 @@ export const esConnect = (data) => async (dispatch, getState) => {
       }
     }
 
+    const primaryIndex = data.telemetryIndex || data.index || "";
     const response = await API.post("/connect-es", {
       params: {
         ...data,
+        index: primaryIndex,
         size,
         offset,
         start_date: start_date,
@@ -66,7 +68,11 @@ export const esConnect = (data) => async (dispatch, getState) => {
         type: TYPES.SET_ES_CONNECTION_INFO,
         payload: {
           host: data.host,
-          index: data.index,
+          port: data.port ?? "",
+          index: primaryIndex,
+          telemetryIndex: data.telemetryIndex ?? "",
+          metricsIndex: data.metricsIndex ?? "",
+          alertsIndex: data.alertsIndex ?? "",
           isConnected: true,
           username: data.username,
           password: data.password,
@@ -92,7 +98,11 @@ export const esConnect = (data) => async (dispatch, getState) => {
       type: TYPES.SET_ES_CONNECTION_INFO,
       payload: {
         host: "",
+        port: "",
         index: "",
+        telemetryIndex: "",
+        metricsIndex: "",
+        alertsIndex: "",
         isConnected: false,
         grafanaBaseUrl: "",
         grafanaDashboardIndex: [],
@@ -116,7 +126,11 @@ export const disconnectES = () => (dispatch) => {
     type: TYPES.SET_ES_CONNECTION_INFO,
     payload: {
       host: "",
+      port: "",
       index: "",
+      telemetryIndex: "",
+      metricsIndex: "",
+      alertsIndex: "",
       isConnected: false,
       grafanaBaseUrl: "",
       grafanaDashboardIndex: [],

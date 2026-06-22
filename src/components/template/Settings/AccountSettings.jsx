@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { updateAccount } from "@/actions/authActions";
 import GroupKubeconfigsSection from "./GroupKubeconfigsSection";
+import GroupElasticConfigsSection from "./GroupElasticConfigsSection";
 import {
   PASSWORD_REQUIREMENTS,
   getUnmetPasswordRequirements,
@@ -211,6 +212,7 @@ const AccountSettings = () => {
         </Button>
       </Form>
       {user?.role === "user" ? <GroupKubeconfigsSection /> : null}
+      {user?.role === "user" ? <GroupElasticConfigsSection /> : null}
     </section>
   );
 };

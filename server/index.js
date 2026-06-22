@@ -938,6 +938,44 @@ app.post("/uploadFile", (req, res) => {
   });
 });
 
+const SCENARIO_HUB_DIR = {
+  "pod-scenarios":       "pod-scenarios",
+  "container-scenarios": "container-scenarios",
+  "namespace-scenarios": "namespace-scenarios",
+  "node-scenarios":      "node-scenarios",
+  "pvc-scenarios":       "pvc-scenario",
+  "time-scenarios":      "time-scenarios",
+  "power-outages":       "power-outages",
+  "node-cpu-hog":        "node-cpu-hog",
+  "node-io-hog":         "node-io-hog",
+  "node-memory-hog":     "node-memory-hog",
+  "kubevirt-outage":     "kubevirt-outage",
+};
+
+const scenarioFieldsCache = new Map();
+
+app.get("/scenario-fields/:scenario", async (req, res) => {
+  const scenario = req.params.scenario;
+  const hubDir = SCENARIO_HUB_DIR[scenario];
+  if (!hubDir) return res.status(404).json({ error: `Unknown scenario: ${scenario}` });
+
+  if (scenarioFieldsCache.has(scenario)) {
+    return res.json(scenarioFieldsCache.get(scenario));
+  }
+
+  try {
+    const url = `https://raw.githubusercontent.com/redhat-chaos/krkn-hub/main/${hubDir}/krknctl-input.json`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
+    const fields = await response.json();
+    scenarioFieldsCache.set(scenario, fields);
+    return res.json(fields);
+  } catch (err) {
+    console.error(`Failed to fetch scenario fields for ${scenario}:`, err.message);
+    return res.status(502).json({ error: `Could not load fields for ${scenario}: ${err.message}` });
+  }
+});
+
 app.get("/grafana-dashboard-index", async (req, res) => {
   const baseUrl = req.query.baseUrl;
   if (!baseUrl || typeof baseUrl !== "string") {
@@ -959,6 +997,7 @@ app.get("/grafana-dashboard-index", async (req, res) => {
 app.post("/connect-es", async (req, res) => {
   const {
     host,
+    port,
     username,
     password,
     use_ssl,
@@ -970,7 +1009,9 @@ app.post("/connect-es", async (req, res) => {
     filters,
   } = req.body.params;
   console.log("Received config:", req.body.params);
-  const node = `${use_ssl ? "https" : "https"}://${host}/`;
+  const node = host && String(host).startsWith("http")
+    ? String(host)
+    : port ? `https://${host}:${port}` : `https://${host}`;
 
   const clientOptions = {
     node,
@@ -1085,6 +1126,7 @@ app.post("/alertsAnalysis", async (req, res) => {
       password,
       use_ssl,
       index,
+      alertsIndex,
       start_date,
       end_date,
       size,
@@ -1095,6 +1137,7 @@ app.post("/alertsAnalysis", async (req, res) => {
       host,
       use_ssl,
       index,
+      alertsIndex,
       username,
       password,
       start_date,

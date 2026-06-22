@@ -1,21 +1,19 @@
 import API from "@/utils/axiosInstance";
 import * as TYPES from "./types";
 
-export const fetchAlertsData = () => async (dispatch, getState) => {
+export const fetchAlertsData = (startDate, endDate, page = 1, perPage = 25) => async (dispatch, getState) => {
   try {
     dispatch({ type: TYPES.LOADING });
     const state = getState().storage;
-    const { start_date, end_date } = getState().summary;
-    const size = 25;
-    const offset = 0;
+    const summaryDates = getState().summary;
     const { connectionInfo } = state;
     const response = await API.post("/alertsAnalysis", {
       params: {
         ...connectionInfo,
-        size,
-        offset,
-        start_date,
-        end_date,
+        size: perPage,
+        offset: (page - 1) * perPage,
+        start_date: startDate ?? summaryDates.start_date,
+        end_date: endDate ?? summaryDates.end_date,
       },
     });
     if (response.status === 200) {

@@ -1,3 +1,7 @@
+import "react-date-picker/dist/DatePicker.css";
+import "react-calendar/dist/Calendar.css";
+import "./index.less";
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Table, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table";
@@ -6,6 +10,8 @@ import {
   Button,
   Label,
   MenuToggle,
+  Pagination,
+  PaginationVariant,
   Select,
   SelectList,
   SelectOption,
@@ -15,16 +21,15 @@ import {
   ToolbarItem,
   Tooltip,
 } from "@patternfly/react-core";
+import DatePicker from "react-date-picker";
 
-const SEVERITY_OPTIONS = ["critical", "error", "warning", "good", "perfect"];
+const SEVERITY_OPTIONS = ["critical", "error", "warning"];
 
 const getRiskClass = (riskLevel) => {
   const s = String(riskLevel || "").toLowerCase();
   if (s === "critical") return "red";
   if (s === "error") return "orange";
   if (s === "warning") return "gold";
-  if (s === "good") return "cyan";
-  if (s === "perfect") return "green";
   return "grey";
 };
 
@@ -39,9 +44,17 @@ const AlertAnalysis = () => {
   const [scenarioOpen, setScenarioOpen] = useState(false);
   const [severityOpen, setSeverityOpen] = useState(false);
 
+  const defaultStartDate = () => { const d = new Date(); d.setDate(d.getDate() - 5); return d; };
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(() => new Date());
+  const [page, setPage] = useState(1);
+  const perPage = 25;
+
+  const toISOString = (d) => (d ? d.toISOString().split("T")[0] : undefined);
+
   useEffect(() => {
-    dispatch(fetchAlertsData());
-  }, [dispatch]);
+    dispatch(fetchAlertsData(toISOString(startDate), toISOString(endDate), page, perPage));
+  }, [dispatch, startDate, endDate, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scenarioOptions = useMemo(() => {
     if (!alerts?.alerts) return [];
@@ -78,7 +91,13 @@ const AlertAnalysis = () => {
     setAlertFilter("");
     setScenarioFilter([]);
     setSeverityFilter([]);
+    setStartDate(defaultStartDate());
+    setEndDate(new Date());
+    setPage(1);
   };
+
+  const handleStartDateChange = (d) => { setStartDate(d); setPage(1); };
+  const handleEndDateChange = (d) => { setEndDate(d); setPage(1); };
 
   const hasFilters =
     uuidFilter || alertFilter || scenarioFilter.length > 0 || severityFilter.length > 0;
@@ -91,7 +110,7 @@ const AlertAnalysis = () => {
 
   return (
     <>
-      <Toolbar id="alert-filter-toolbar">
+      <Toolbar id="alert-filter-toolbar" style={{ paddingTop: "1rem" }}>
         <ToolbarContent>
           <ToolbarItem>
             <TextInput
@@ -187,6 +206,25 @@ const AlertAnalysis = () => {
             </ToolbarItem>
           )}
         </ToolbarContent>
+        <ToolbarContent className="date-filter">
+          <ToolbarItem>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <DatePicker
+                onChange={handleStartDateChange}
+                value={startDate}
+                maxDate={endDate || undefined}
+                clearIcon={null}
+              />
+              <span className="to-text">to</span>
+              <DatePicker
+                onChange={handleEndDateChange}
+                value={endDate}
+                minDate={startDate || undefined}
+                clearIcon={null}
+              />
+            </div>
+          </ToolbarItem>
+        </ToolbarContent>
       </Toolbar>
       <Table aria-label="Alert Analysis Table">
         <Thead>
@@ -230,6 +268,15 @@ const AlertAnalysis = () => {
           )}
         </Tbody>
       </Table>
+      <Pagination
+        itemCount={alerts?.total ?? 0}
+        perPage={perPage}
+        page={page}
+        variant={PaginationVariant.bottom}
+        onSetPage={(_e, p) => setPage(p)}
+        perPageOptions={[{ title: "25", value: 25 }]}
+        ouiaId="alert_table_pagination"
+      />
     </>
   );
 };

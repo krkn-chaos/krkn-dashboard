@@ -229,48 +229,20 @@ export const fetchComparisonFromOpenSearch = async (params) => {
 export const fetchAlertsFromOpenSearch = async (params) => {
   const client = createElasticRunsOpenSearchClient(params);
   const index = params.index || params.es_index || "*";
+  const alertsIndex = params.alertsIndex || "krkn-alerts";
 
-  const failedRunsResp = await client.search({
-    index,
-    body: {
-      size: 100,
-      _source: ["run_uuid", "scenarios.scenario_type"],
-      query: buildQuery({
-        ...params,
-        extraMust: [{ term: { job_status: "false" } }],
-      }),
-    },
-  });
-
-  const failedHits = failedRunsResp?.body?.hits?.hits || [];
-  const runInfo = {};
-  const runUuids = [];
-  for (const hit of failedHits) {
-    const run_uuid = hit?._source?.run_uuid;
-    if (!run_uuid) continue;
-    runUuids.push(run_uuid);
-    runInfo[run_uuid] = hit?._source?.scenarios?.[0]?.scenario_type || "Unknown Scenario";
-  }
-  if (!runUuids.length) {
-    return { total: 0, alerts: [] };
-  }
-
-  const alertsIndex = "krkn-alerts";
-  const runUuidShould = runUuids.flatMap((uuid) => [
-    { match: { run_uuid: uuid } },
-    { term: { "run_uuid.keyword": uuid } },
-  ]);
+  // Step 1: fetch alerts for the requested page.
+  // The alerts index uses `created_at`, not `timestamp`, so we build the date filter inline.
+  const alertsDateFilter =
+    params.start_date && params.end_date
+      ? [{ range: { created_at: { gte: params.start_date, lte: params.end_date } } }]
+      : [];
   const alertsResp = await client.search({
     index: alertsIndex,
     body: {
-      query: {
-        bool: {
-          should: runUuidShould,
-          minimum_should_match: 1,
-        },
-      },
+      query: alertsDateFilter.length ? { bool: { filter: alertsDateFilter } } : { match_all: {} },
       sort: [{ created_at: { order: "desc" } }],
-      _source: ["run_uuid", "alert", "severity", "created_at"],
+      _source: ["run_uuid", "alert", "severity", "created_at", "scenario_type"],
       size: params.size || 25,
       from: params.offset || 0,
     },
@@ -281,8 +253,55 @@ export const fetchAlertsFromOpenSearch = async (params) => {
     typeof rawTotal === "object" && rawTotal !== null
       ? rawTotal.value ?? 0
       : Number(rawTotal) || 0;
-  const alerts = (alertsResp?.body?.hits?.hits || []).map((hit) => {
-    const src = hit?._source || {};
+
+  const alertHits = alertsResp?.body?.hits?.hits || [];
+  if (!alertHits.length) return { total, alerts: [] };
+
+  // Step 2: collect run_uuids that don't already carry scenario_type in the alert doc.
+  // Use runInfo as the source of truth so the same uuid is never queried twice.
+  const runInfo = {};
+  const missingUuids = new Set();
+  for (const hit of alertHits) {
+    const src = hit._source || {};
+    if (!src.run_uuid) continue;
+    if (src.scenario_type) {
+      runInfo[src.run_uuid] = src.scenario_type;
+      missingUuids.delete(src.run_uuid); // already resolved — remove if previously queued
+    } else if (!runInfo[src.run_uuid]) {
+      missingUuids.add(src.run_uuid);    // only add if not already known
+    }
+  }
+
+  // Step 3: look up scenario_type from the telemetry index for any missing run_uuids.
+  // No failed-only filter — any run (pass or fail) may have produced alerts.
+  if (missingUuids.size > 0) {
+    const uuidList = [...missingUuids];
+    const should = uuidList.flatMap((uuid) => [
+      { match: { run_uuid: uuid } },
+      { term: { "run_uuid.keyword": uuid } },
+    ]);
+    try {
+      const runsResp = await client.search({
+        index,
+        body: {
+          size: uuidList.length,
+          _source: ["run_uuid", "scenarios.scenario_type"],
+          query: { bool: { should, minimum_should_match: 1 } },
+        },
+      });
+      for (const hit of runsResp?.body?.hits?.hits || []) {
+        const src = hit._source || {};
+        if (src.run_uuid) {
+          runInfo[src.run_uuid] = src.scenarios?.[0]?.scenario_type || null;
+        }
+      }
+    } catch {
+      // telemetry lookup failure — fall through, scenario_type will be "Unknown Scenario"
+    }
+  }
+
+  const alerts = alertHits.map((hit) => {
+    const src = hit._source || {};
     return {
       run_uuid: src.run_uuid,
       scenario_type: runInfo[src.run_uuid] || "Unknown Scenario",

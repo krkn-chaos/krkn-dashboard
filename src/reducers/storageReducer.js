@@ -19,7 +19,11 @@ const initialState = {
   filterData: [],
   connectionInfo: {
     host: "",
+    port: "",
     index: "",
+    telemetryIndex: "",
+    metricsIndex: "",
+    alertsIndex: "",
     isConnected: false,
     grafanaBaseUrl: "",
     grafanaDashboardIndex: [],

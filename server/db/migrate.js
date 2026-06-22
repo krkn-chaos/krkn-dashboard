@@ -235,6 +235,66 @@ const MIGRATIONS = [
       );
     },
   },
+  {
+    name: "011_elasticsearch_configs",
+    up: async () => {
+      await exec(`CREATE TABLE IF NOT EXISTS elasticsearch_configs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        host TEXT NOT NULL,
+        port INTEGER NOT NULL DEFAULT 9200,
+        telemetry_index TEXT NOT NULL DEFAULT '',
+        metrics_index TEXT NOT NULL DEFAULT '',
+        alerts_index TEXT NOT NULL DEFAULT '',
+        username TEXT NOT NULL DEFAULT '',
+        password TEXT NOT NULL DEFAULT '',
+        grafana_url TEXT NOT NULL DEFAULT '',
+        group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`);
+    },
+  },
+  {
+    name: "012_elasticsearch_configs_v2",
+    up: async () => {
+      // Recreate table with correct columns, dropping grafana_base_url / index_name
+      // and adding telemetry_index, metrics_index, alerts_index, grafana_url.
+      await exec(`CREATE TABLE IF NOT EXISTS elasticsearch_configs_v2 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        host TEXT NOT NULL,
+        port INTEGER NOT NULL DEFAULT 9200,
+        telemetry_index TEXT NOT NULL DEFAULT '',
+        metrics_index TEXT NOT NULL DEFAULT '',
+        alerts_index TEXT NOT NULL DEFAULT '',
+        username TEXT NOT NULL DEFAULT '',
+        password TEXT NOT NULL DEFAULT '',
+        grafana_url TEXT NOT NULL DEFAULT '',
+        group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`);
+      const cols = await all(`PRAGMA table_info(elasticsearch_configs)`);
+      const colNames = cols.map((c) => c.name);
+      if (colNames.includes("grafana_base_url") || colNames.includes("index_name")) {
+        await exec(`INSERT INTO elasticsearch_configs_v2 (id, name, host, port, username, password, group_id, created_at)
+          SELECT id, name, host, port, username, password, group_id, created_at FROM elasticsearch_configs`);
+        await exec(`DROP TABLE elasticsearch_configs`);
+        await exec(`ALTER TABLE elasticsearch_configs_v2 RENAME TO elasticsearch_configs`);
+      } else {
+        await exec(`DROP TABLE elasticsearch_configs_v2`);
+      }
+    },
+  },
+  {
+    name: "013_elasticsearch_grafana_url",
+    up: async () => {
+      // Add grafana_url if missing (handles installs that ran 012 before grafana_url was added).
+      const cols = await all(`PRAGMA table_info(elasticsearch_configs)`);
+      if (!cols.map((c) => c.name).includes("grafana_url")) {
+        await exec(`ALTER TABLE elasticsearch_configs ADD COLUMN grafana_url TEXT NOT NULL DEFAULT ''`);
+      }
+    },
+  },
 ];
 
 export async function runMigrations() {

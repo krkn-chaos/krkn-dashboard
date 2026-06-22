@@ -694,6 +694,110 @@ router.delete("/kubeconfigs/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Elasticsearch saved configs ──────────────────────────────────────────────
+
+router.get("/elasticsearch-configs", async (req, res) => {
+  const { listElasticConfigsForGroupIds, listAllElasticConfigs } = await import("../db/elasticConfigs.js");
+  const list = req.user.role === "admin"
+    ? await listAllElasticConfigs()
+    : await listElasticConfigsForGroupIds(req.user.groupIds || []);
+  res.json({ configs: list });
+});
+
+router.post("/elasticsearch-configs", async (req, res) => {
+  const { createElasticConfig } = await import("../db/elasticConfigs.js");
+  const { name, host, port, telemetryIndex, metricsIndex, alertsIndex, username, password, grafanaUrl, groupId } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: "Name is required" });
+  if (!host?.trim()) return res.status(400).json({ error: "Host is required" });
+  const gid = parseInt(groupId, 10);
+  if (!gid) return res.status(400).json({ error: "groupId is required" });
+  if (req.user.role !== "admin" && !(req.user.groupIds || []).includes(gid)) {
+    return res.status(403).json({ error: "You are not a member of this group" });
+  }
+  try {
+    const id = await createElasticConfig({
+      name: name.trim(),
+      host: host.trim(),
+      port: port ? parseInt(port, 10) : 9200,
+      telemetryIndex: telemetryIndex?.trim() ?? "",
+      metricsIndex: metricsIndex?.trim() ?? "",
+      alertsIndex: alertsIndex?.trim() ?? "",
+      username: username?.trim() ?? "",
+      password: password ?? "",
+      grafanaUrl: grafanaUrl?.trim() ?? "",
+      groupId: gid,
+    });
+    await recordAudit({
+      groupId: gid,
+      userId: req.user.id,
+      action: "elasticsearch_config.created",
+      resourceType: "elasticsearch_config",
+      resourceId: String(id),
+      metadata: { name: name.trim(), host: host.trim() },
+    });
+    res.status(201).json({ id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.patch("/elasticsearch-configs/:id", async (req, res) => {
+  const { getElasticConfigById, updateElasticConfig } = await import("../db/elasticConfigs.js");
+  const id = parseInt(req.params.id, 10);
+  const row = await getElasticConfigById(id);
+  if (!row) return res.status(404).json({ error: "Not found" });
+  if (req.user.role !== "admin" && !(req.user.groupIds || []).includes(row.group_id)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const { name, host, port, telemetryIndex, metricsIndex, alertsIndex, username, password, grafanaUrl } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: "Name is required" });
+  if (!host?.trim()) return res.status(400).json({ error: "Host is required" });
+  try {
+    await updateElasticConfig(id, {
+      name: name.trim(),
+      host: host.trim(),
+      port: port ? parseInt(port, 10) : 9200,
+      telemetryIndex: telemetryIndex?.trim() ?? "",
+      metricsIndex: metricsIndex?.trim() ?? "",
+      alertsIndex: alertsIndex?.trim() ?? "",
+      username: username?.trim() ?? "",
+      grafanaUrl: grafanaUrl?.trim() ?? "",
+      password: password?.trim() ? password : undefined,
+    });
+    await recordAudit({
+      groupId: row.group_id,
+      userId: req.user.id,
+      action: "elasticsearch_config.updated",
+      resourceType: "elasticsearch_config",
+      resourceId: String(id),
+      metadata: { name: name.trim(), host: host.trim() },
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete("/elasticsearch-configs/:id", async (req, res) => {
+  const { getElasticConfigById, deleteElasticConfig } = await import("../db/elasticConfigs.js");
+  const id = parseInt(req.params.id, 10);
+  const row = await getElasticConfigById(id);
+  if (!row) return res.status(404).json({ error: "Not found" });
+  if (req.user.role !== "admin" && !(req.user.groupIds || []).includes(row.group_id)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  await deleteElasticConfig(id);
+  await recordAudit({
+    groupId: row.group_id,
+    userId: req.user.id,
+    action: "elasticsearch_config.deleted",
+    resourceType: "elasticsearch_config",
+    resourceId: String(id),
+    metadata: { name: row.name, host: row.host },
+  });
+  res.json({ ok: true });
+});
+
 router.get("/audit", async (req, res) => {
   const { listAuditForGroups, listAllAuditEvents } = await import(
     "../db/audit.js"

@@ -1,106 +1,107 @@
 import {
-  ActionGroup,
-  Form,
-  FormGroup,
-  TextInput,
+  Alert,
+  Button,
+  Spinner,
 } from "@patternfly/react-core";
+import {
+  Table,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
+} from "@patternfly/react-table";
 import React, { useEffect, useState } from "react";
 
-import { TextButton } from "@/components/atoms/Buttons/Buttons";
+import API from "@/utils/axiosInstance";
 import { esConnect } from "@/actions/storageActions.js";
 import { useDispatch } from "react-redux";
 
-const formFields = [
-  {
-    id: 0,
-    label: "ES instance",
-    key: "host",
-    describedby: "host URL",
-    isPassword: false,
-  },
-  {
-    id: 1,
-    label: "Index",
-    key: "index",
-    describedby: "Index",
-    isPassword: false,
-  },
-  {
-    id: 2,
-    label: "Username",
-    key: "username",
-    describedby: "Username",
-    isPassword: false,
-  },
-  {
-    id: 3,
-    label: "Pasword",
-    key: "password",
-    describedby: "Password",
-    isPassword: true,
-  },
-  {
-    id: 4,
-    label: "Grafana Base URL",
-    key: "grafanaBaseUrl",
-    describedby: "Grafana root URL (dashboards are discovered automatically)",
-    isPassword: false,
-    isOptional: true,
-  },
-];
-const getInitialEsForm = () => ({
-  host: "",
-  index: "",
-  port: 9200,
-  username: "",
-  password: "",
-  use_ssl: false,
-  grafanaBaseUrl: "",
-});
-
 const ESConnectForm = () => {
   const dispatch = useDispatch();
-  const [esForm, setEsForm] = useState(getInitialEsForm);
-  const [isBtnDisabled, setIsBtnDisabled] = useState(true);
+  const [configs, setConfigs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(null);
 
   useEffect(() => {
-    const isHostValid = esForm.host.trim() !== "";
-    setIsBtnDisabled(!isHostValid);
-  }, [esForm]);
+    API.get("/auth/elasticsearch-configs")
+      .then((res) => setConfigs(res.data.configs || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-  const changeHandler = (_event, value, key) => {
-    setEsForm((prevSatate) => ({
-      ...prevSatate,
-      [key]: value,
+  const connect = async (cfg) => {
+    setConnecting(cfg.id);
+    await dispatch(esConnect({
+      host: cfg.host ?? "",
+      telemetryIndex: cfg.telemetry_index ?? "",
+      metricsIndex: cfg.metrics_index ?? "",
+      alertsIndex: cfg.alerts_index ?? "",
+      port: cfg.port ?? 9200,
+      username: cfg.username ?? "",
+      password: cfg.password ?? "",
+      use_ssl: false,
     }));
+    setConnecting(null);
   };
-  const connectToInstance = () => {
-    dispatch(esConnect(esForm));
-  };
+
+  if (loading) {
+    return <Spinner size="lg" aria-label="Loading connections" />;
+  }
+
+  if (configs.length === 0) {
+    return (
+      <Alert variant="info" isInline title="No saved Elasticsearch connections">
+        Add connections from Administration → Elasticsearch or Account Settings → Group Elasticsearch configs.
+      </Alert>
+    );
+  }
+
   return (
-    <Form>
-      {formFields.map((field) => (
-        <FormGroup key={field.id} label={field.label}>
-          <TextInput
-            isRequired={!field.isOptional}
-            type={field.isPassword ? "password" : "text"}
-            id={field.key}
-            name={field.key}
-            aria-describedby="simple-form-name-02-helper"
-            value={esForm[field.key]}
-            onChange={(evt, val) => changeHandler(evt, val, field.key)}
-          />
-        </FormGroup>
-      ))}
-      <ActionGroup className="action-group-wrapper">
-        <TextButton
-          variant="primary"
-          isBtnDisabled={isBtnDisabled}
-          clickHandler={connectToInstance}
-          text={"Connect to the instance"}
-        />
-      </ActionGroup>
-    </Form>
+    <Table aria-label="Elasticsearch connections" variant="compact">
+      <Thead>
+        <Tr>
+          <Th>Name</Th>
+          <Th>Group</Th>
+          <Th>Host</Th>
+          <Th>Telemetry Index</Th>
+          <Th>Metrics Index</Th>
+          <Th>Alerts Index</Th>
+          <Th>Grafana</Th>
+          <Th />
+        </Tr>
+      </Thead>
+      <Tbody>
+        {configs.map((c) => (
+          <Tr key={c.id}>
+            <Td>{c.name}</Td>
+            <Td>{c.group_name || "—"}</Td>
+            <Td>{c.host}</Td>
+            <Td>{c.telemetry_index || "—"}</Td>
+            <Td>{c.metrics_index || "—"}</Td>
+            <Td>{c.alerts_index || "—"}</Td>
+            <Td>
+              {c.grafana_url ? (
+                <a href={c.grafana_url} target="_blank" rel="noreferrer">
+                  Open
+                </a>
+              ) : "—"}
+            </Td>
+            <Td>
+              <Button
+                variant="primary"
+                isSmall
+                isLoading={connecting === c.id}
+                isDisabled={connecting !== null}
+                onClick={() => connect(c)}
+              >
+                Connect
+              </Button>
+            </Td>
+          </Tr>
+        ))}
+      </Tbody>
+    </Table>
   );
 };
 
