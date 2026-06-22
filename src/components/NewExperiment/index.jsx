@@ -13,6 +13,7 @@ import {
   Grid,
   GridItem,
   TextInput,
+  Tooltip,
   Title,
 } from "@patternfly/react-core";
 import React, { useEffect, useRef, useState } from "react";
@@ -25,6 +26,7 @@ import KubeconfigSelect from "@/components/molecules/KubeconfigSelect";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import API from "@/utils/axiosInstance";
 import { extractReplayBaseStem } from "@/utils/replayNaming";
+import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import { paramsList, globalParamsData } from "./experimentFormData";
 import { setActiveGroupId } from "@/actions/authActions";
 import { showToast } from "@/actions/toastActions";
@@ -174,6 +176,18 @@ const NewExperiment = () => {
   };
 
   const [globalData, setGlobalData] = useState(initGlobalData());
+
+  const [globalSectionExpanded, setGlobalSectionExpanded] = useState(true);
+
+  const [categoryExpanded, setCategoryExpanded] = useState(() =>
+    Object.fromEntries(
+      globalParamsData.map((c) => [c.category, c.defaultExpanded ?? false])
+    )
+  );
+
+  const toggleCategory = (category) => {
+    setCategoryExpanded((prev) => ({ ...prev, [category]: !prev[category] }));
+  };
 
   const globalChangeHandler = (_event, value, key) => {
     setGlobalData((prevState) => ({
@@ -494,11 +508,20 @@ const NewExperiment = () => {
 
             {/* Global Scenario Variables Collapsible Section */}
             <GridItem span={12} className="new-experiment__global-section-wrapper pf-v5-u-mt-md">
-              <ExpandableSection toggleText="Global Scenario Variables" displaySize="large">
+              <ExpandableSection
+                toggleText="Global Scenario Variables"
+                displaySize="large"
+                isExpanded={globalSectionExpanded}
+                onToggle={() => setGlobalSectionExpanded((prev) => !prev)}
+              >
                 <Grid hasGutter className="pf-v5-u-mt-md">
                   {globalParamsData.map((category) => (
                     <GridItem span={12} key={category.category} className="new-experiment__global-category-item">
-                      <ExpandableSection toggleText={category.category}>
+                      <ExpandableSection
+                        toggleText={category.category}
+                        isExpanded={categoryExpanded[category.category]}
+                        onToggle={() => toggleCategory(category.category)}
+                      >
                         <Grid hasGutter className="pf-v5-u-mt-md pf-v5-u-p-md" style={{ backgroundColor: "var(--pf-v5-global--BackgroundColor--light-100)", borderRadius: "4px" }}>
                           {category.fields.map((field) => (
                             <GridItem span={6} key={field.key}>
@@ -506,6 +529,13 @@ const NewExperiment = () => {
                                 label={field.label}
                                 fieldId={field.key}
                                 helperText={field.helperText}
+                                labelIcon={field.warning ? (
+                                  <Tooltip content={field.warning}>
+                                    <ExclamationTriangleIcon
+                                      style={{ color: "var(--pf-v5-global--warning-color--100)", cursor: "default", verticalAlign: "middle" }}
+                                    />
+                                  </Tooltip>
+                                ) : undefined}
                               >
                                 <TextInput
                                   type="text"
