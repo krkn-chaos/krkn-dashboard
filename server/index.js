@@ -1108,6 +1108,109 @@ app.post("/alertsAnalysis", async (req, res) => {
   }
 });
 
+// ── Scenario field definitions ─────────────────────────────────────────────────
+// Serves krknctl-input.json field definitions per scenario, sourced from the
+// krknctl.input_fields Docker label on each Quay image. Falls back to the local
+// kraken-hub repo when Quay is unreachable. Results are cached in-memory for
+// the lifetime of the server process.
+
+const QUAY_REPO = "krkn-chaos/krkn-hub";
+const SCENARIO_HUB_DIRS = {
+  "pod-scenarios":       "pod-scenarios",
+  "container-scenarios": "container-scenarios",
+  "namespace-scenarios": "namespace-scenarios",
+  "node-scenarios":      "node-scenarios",
+  "pvc-scenarios":       "pvc-scenario",
+  "time-scenarios":      "time-scenarios",
+  "power-outages":       "power-outages",
+  "node-cpu-hog":        "node-cpu-hog",
+  "node-io-hog":         "node-io-hog",
+  "node-memory-hog":     "node-memory-hog",
+  "kubevirt-outage":     "kubevirt-outage",
+};
+
+const krakenHubPath = process.env.KRAKEN_HUB_PATH
+  ? path.resolve(process.env.KRAKEN_HUB_PATH)
+  : path.resolve(__dirname, "../../kraken-hub");
+
+const scenarioFieldsCache = new Map();
+
+async function getQuayToken() {
+  const res = await fetch(
+    `https://quay.io/v2/auth?service=quay.io&scope=repository:${QUAY_REPO}:pull`,
+    { signal: AbortSignal.timeout(10_000) }
+  );
+  if (!res.ok) throw new Error(`Quay auth: ${res.status}`);
+  const { token } = await res.json();
+  return token;
+}
+
+async function fetchFieldsFromQuay(tag, token) {
+  const manifestRes = await fetch(
+    `https://quay.io/v2/${QUAY_REPO}/manifests/${tag}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.docker.distribution.manifest.v2+json",
+      },
+      signal: AbortSignal.timeout(15_000),
+    }
+  );
+  if (!manifestRes.ok) throw new Error(`Manifest ${tag}: ${manifestRes.status}`);
+  const manifest = await manifestRes.json();
+  const digest = manifest.config?.digest;
+  if (!digest) throw new Error(`No config digest for ${tag}`);
+
+  const blobRes = await fetch(
+    `https://quay.io/v2/${QUAY_REPO}/blobs/${digest}`,
+    { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20_000) }
+  );
+  if (!blobRes.ok) throw new Error(`Blob ${tag}: ${blobRes.status}`);
+  const config = await blobRes.json();
+  const label = config.config?.Labels?.["krknctl.input_fields"];
+  if (!label) throw new Error(`Label not found on ${tag}`);
+  return JSON.parse(label);
+}
+
+function loadLocalScenarioFields(hubDir) {
+  const jsonPath = path.join(krakenHubPath, hubDir, "krknctl-input.json");
+  if (!fs.existsSync(jsonPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+app.get("/scenario-fields/:scenario", async (req, res) => {
+  const { scenario } = req.params;
+  const hubDir = SCENARIO_HUB_DIRS[scenario];
+  if (!hubDir) return res.status(404).json({ error: "Unknown scenario" });
+
+  if (scenarioFieldsCache.has(scenario)) {
+    return res.json(scenarioFieldsCache.get(scenario));
+  }
+
+  let fields = null;
+  try {
+    const token = await getQuayToken();
+    fields = await fetchFieldsFromQuay(scenario, token);
+  } catch (err) {
+    console.warn(`[scenario-fields] Quay unavailable for ${scenario}: ${err.message}`);
+  }
+
+  if (!fields) {
+    fields = loadLocalScenarioFields(hubDir);
+  }
+
+  if (!fields) {
+    return res.status(503).json({ error: `Could not load fields for ${scenario}` });
+  }
+
+  scenarioFieldsCache.set(scenario, fields);
+  res.json(fields);
+});
+
 const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
 });
