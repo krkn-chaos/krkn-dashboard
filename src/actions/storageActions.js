@@ -227,6 +227,15 @@ export const setSelectedFilter =
       payload: selectedFilters,
     });
   };
+export const clearAllFilters = (navigate, pageType) => (dispatch, getState) => {
+  const emptyFilters = getState().storage.selectedFilters.map((f) => ({
+    ...f,
+    value: [],
+  }));
+  dispatch({ type: TYPES.SET_SELECTED_FILTERS, payload: emptyFilters });
+  dispatch(setAppliedFilters(navigate, pageType));
+};
+
 export const setAppliedFilters =
   (navigate, pageType) => (dispatch, getState) => {
     const { start_date, end_date, selectedFilters, connectionInfo } =
