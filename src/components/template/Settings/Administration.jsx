@@ -54,6 +54,13 @@ const Administration = () => {
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [kubeconfigUploadGroupId, setKubeconfigUploadGroupId] = useState("");
   const [kubeconfigFilterGroupId, setKubeconfigFilterGroupId] = useState("");
+  const [elasticConfigs, setElasticConfigs] = useState([]);
+  const [elasticFilterGroupId, setElasticFilterGroupId] = useState("");
+  const emptyElasticForm = () => ({ name: "", host: "", port: "9200", username: "", password: "", telemetryIndex: "krkn-telemetry", metricsIndex: "krkn-metrics", alertsIndex: "krkn-alerts", grafanaUrl: "" });
+  const [elasticForm, setElasticForm] = useState(emptyElasticForm);
+  const [editingElasticConfig, setEditingElasticConfig] = useState(null);
+  const [editElasticForm, setEditElasticForm] = useState(emptyElasticForm);
+  const [showElasticPasswordEdit, setShowElasticPasswordEdit] = useState(false);
   const [kubeconfigName, setKubeconfigName] = useState("");
   const [kubeconfigFile, setKubeconfigFile] = useState(null);
   const [editingKubeconfig, setEditingKubeconfig] = useState(null);
@@ -62,14 +69,16 @@ const Administration = () => {
   const [editGroupMemberships, setEditGroupMemberships] = useState({});
 
   const loadAll = useCallback(async () => {
-    const [u, k, a] = await Promise.all([
+    const [u, k, es, a] = await Promise.all([
       API.get("/auth/users"),
       API.get("/auth/kubeconfigs"),
+      API.get("/auth/elasticsearch-configs"),
       API.get("/auth/audit"),
     ]);
     setUsers(u.data.users || []);
     setKubeconfigs(k.data.kubeconfigs || []);
     setAudit(a.data.events || []);
+    setElasticConfigs(es.data.configs || []);
     const g = await dispatch(fetchAdminGroups());
     setGroups(g || []);
     await dispatch(fetchKubeconfigs());
@@ -245,9 +254,79 @@ const Administration = () => {
   const uploadableGroups = groups.filter((g) => memberGroupIds.has(g.id));
   const filteredKubeconfigs = kubeconfigFilterGroupId
     ? kubeconfigs.filter(
-        (k) => k.group_id === parseInt(kubeconfigFilterGroupId, 10)
-      )
+      (k) => k.group_id === parseInt(kubeconfigFilterGroupId, 10)
+    )
     : kubeconfigs;
+
+  const setElasticField = (key, value) =>
+    setElasticForm((prev) => ({ ...prev, [key]: value }));
+
+  const saveElasticConfig = async () => {
+    if (!elasticForm.name.trim() || !elasticForm.host.trim() || !elasticForm.groupId) {
+      dispatch(showToast("warning", "Name, host, and group are required"));
+      return;
+    }
+    try {
+      await API.post("/auth/elasticsearch-configs", {
+        ...elasticForm,
+        groupId: elasticForm.groupId,
+      });
+      dispatch(showToast("success", "Elasticsearch config saved"));
+      setElasticForm(emptyElasticForm());
+      await loadAll();
+    } catch (e) {
+      dispatch(showToast("danger", "Save failed", e.response?.data?.error));
+    }
+  };
+
+  const deleteElasticConfig = async (id) => {
+    try {
+      await API.delete(`/auth/elasticsearch-configs/${id}`);
+      dispatch(showToast("success", "Config deleted"));
+      await loadAll();
+    } catch (e) {
+      dispatch(showToast("danger", "Delete failed", e.response?.data?.error));
+    }
+  };
+
+  const openEditElastic = (c) => {
+    setEditingElasticConfig(c);
+    setShowElasticPasswordEdit(false);
+    setEditElasticForm({
+      name: c.name ?? "",
+      host: c.host ?? "",
+      port: String(c.port ?? 9200),
+      username: c.username ?? "",
+      password: "",
+      telemetryIndex: c.telemetry_index ?? "",
+      metricsIndex: c.metrics_index ?? "",
+      alertsIndex: c.alerts_index ?? "",
+      grafanaUrl: c.grafana_url ?? "",
+    });
+  };
+
+  const closeEditElastic = () => { setEditingElasticConfig(null); setShowElasticPasswordEdit(false); };
+
+  const saveEditElastic = async () => {
+    if (!editElasticForm.name.trim() || !editElasticForm.host.trim()) {
+      dispatch(showToast("warning", "Name and host are required"));
+      return;
+    }
+    try {
+      await API.patch(`/auth/elasticsearch-configs/${editingElasticConfig.id}`, editElasticForm);
+      dispatch(showToast("success", "Config updated"));
+      closeEditElastic();
+      await loadAll();
+    } catch (e) {
+      dispatch(showToast("danger", "Update failed", e.response?.data?.error));
+    }
+  };
+
+  const filteredElasticConfigs = elasticFilterGroupId
+    ? elasticConfigs.filter(
+      (c) => c.group_id === parseInt(elasticFilterGroupId, 10)
+    )
+    : elasticConfigs;
 
   return (
     <div className="settings-page">
@@ -516,7 +595,152 @@ const Administration = () => {
             </Tbody>
           </Table>
         </Tab>
-        <Tab eventKey={3} title={<TabTitleText>Audit</TabTitleText>}>
+        <Tab eventKey={3} title={<TabTitleText>Elasticsearch</TabTitleText>}>
+          <p className="settings-page__hint">
+            Manage Elasticsearch connection configs across all groups. Saved configs can be loaded in the Analysis view.
+          </p>
+          <Form className="settings-form">
+            <FormGroup label="Group" fieldId="es-admin-group" isRequired>
+              <FormSelect
+                id="es-admin-group"
+                value={elasticForm.groupId || ""}
+                onChange={(_e, v) => setElasticField("groupId", v)}
+              >
+                <FormSelectOption value="" label="Select group…" />
+                {groups.map((g) => (
+                  <FormSelectOption key={g.id} value={String(g.id)} label={g.name} />
+                ))}
+              </FormSelect>
+            </FormGroup>
+            <FormGroup label="Display name" fieldId="es-admin-name" isRequired>
+              <TextInput
+                id="es-admin-name"
+                value={elasticForm.name}
+                onChange={(_e, v) => setElasticField("name", v)}
+              />
+            </FormGroup>
+            <FormGroup label="Host" fieldId="es-admin-host" isRequired>
+              <TextInput
+                id="es-admin-host"
+                value={elasticForm.host}
+                placeholder="https://my-es-host:9200"
+                onChange={(_e, v) => setElasticField("host", v)}
+              />
+            </FormGroup>
+            <FormGroup label="Port" fieldId="es-admin-port">
+              <TextInput
+                id="es-admin-port"
+                type="number"
+                value={elasticForm.port}
+                onChange={(_e, v) => setElasticField("port", v)}
+              />
+            </FormGroup>
+            <FormGroup label="Username" fieldId="es-admin-username">
+              <TextInput
+                id="es-admin-username"
+                value={elasticForm.username}
+                onChange={(_e, v) => setElasticField("username", v)}
+              />
+            </FormGroup>
+            <FormGroup label="Password" fieldId="es-admin-password">
+              <TextInput
+                id="es-admin-password"
+                type="password"
+                value={elasticForm.password}
+                onChange={(_e, v) => setElasticField("password", v)}
+              />
+            </FormGroup>
+            <FormGroup label="Telemetry Index" fieldId="es-admin-telemetry-index">
+              <TextInput
+                id="es-admin-telemetry-index"
+                value={elasticForm.telemetryIndex}
+                onChange={(_e, v) => setElasticField("telemetryIndex", v)}
+              />
+            </FormGroup>
+            <FormGroup label="Metrics Index" fieldId="es-admin-metrics-index">
+              <TextInput
+                id="es-admin-metrics-index"
+                value={elasticForm.metricsIndex}
+                onChange={(_e, v) => setElasticField("metricsIndex", v)}
+              />
+            </FormGroup>
+            <FormGroup label="Alerts Index" fieldId="es-admin-alerts-index">
+              <TextInput
+                id="es-admin-alerts-index"
+                value={elasticForm.alertsIndex}
+                onChange={(_e, v) => setElasticField("alertsIndex", v)}
+              />
+            </FormGroup>
+            <FormGroup label="Grafana URL" fieldId="es-admin-grafana-url">
+              <TextInput
+                id="es-admin-grafana-url"
+                value={elasticForm.grafanaUrl}
+                placeholder="Optional — e.g. https://grafana.example.com/d/abc"
+                onChange={(_e, v) => setElasticField("grafanaUrl", v)}
+              />
+            </FormGroup>
+            <Button onClick={saveElasticConfig}>Save config</Button>
+          </Form>
+          <FormGroup label="Filter by group" fieldId="es-admin-filter" style={{ marginTop: "1.5rem" }}>
+            <FormSelect
+              id="es-admin-filter"
+              value={elasticFilterGroupId}
+              onChange={(_e, v) => setElasticFilterGroupId(v)}
+            >
+              <FormSelectOption value="" label="All groups" />
+              {groups.map((g) => (
+                <FormSelectOption key={`esf-${g.id}`} value={String(g.id)} label={g.name} />
+              ))}
+            </FormSelect>
+          </FormGroup>
+          <Table aria-label="Elasticsearch configs" variant="compact" style={{ marginTop: "1rem" }}>
+            <Thead>
+              <Tr>
+                <Th>Group</Th>
+                <Th>Name</Th>
+                <Th>Host</Th>
+                <Th>Username</Th>
+                <Th>Password</Th>
+                <Th>Telemetry Index</Th>
+                <Th>Metrics Index</Th>
+                <Th>Alerts Index</Th>
+                <Th>Grafana URL</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {filteredElasticConfigs.map((c) => (
+                <Tr key={c.id}>
+                  <Td>{c.group_name}</Td>
+                  <Td>{c.name}</Td>
+                  <Td>{c.host}</Td>
+                  <Td>{c.username || "—"}</Td>
+                  <Td>{c.password ? "••••••••" : "—"}</Td>
+                  <Td>{c.telemetry_index || "—"}</Td>
+                  <Td>{c.metrics_index || "—"}</Td>
+                  <Td>{c.alerts_index || "—"}</Td>
+                  <Td>{c.grafana_url ? <a href={c.grafana_url} target="_blank" rel="noreferrer">{c.grafana_url}</a> : "—"}</Td>
+                  <Td>
+                    <Button variant="link" onClick={() => openEditElastic(c)}>
+                      Edit
+                    </Button>
+                    <Button variant="danger" onClick={() => deleteElasticConfig(c.id)}>
+                      Delete
+                    </Button>
+                  </Td>
+                </Tr>
+              ))}
+              {filteredElasticConfigs.length === 0 && (
+                <Tr>
+                  <Td colSpan={10} style={{ textAlign: "center", color: "var(--pf-v5-global--Color--200)" }}>
+                    No configs yet.
+                  </Td>
+                </Tr>
+              )}
+            </Tbody>
+          </Table>
+        </Tab>
+        <Tab eventKey={4} title={<TabTitleText>Audit</TabTitleText>}>
           <Table aria-label="Audit">
             <Thead>
               <Tr>
@@ -630,6 +854,130 @@ const Administration = () => {
             </div>
           </>
         ) : null}
+      </Modal>
+
+      <Modal
+        variant={ModalVariant.medium}
+        title={`Edit — ${editingElasticConfig?.name ?? ""}`}
+        isOpen={Boolean(editingElasticConfig)}
+        onClose={closeEditElastic}
+      >
+        <Form className="settings-form">
+          <FormGroup label="Display name" fieldId="edit-es-name" isRequired>
+            <TextInput
+              id="edit-es-name"
+              value={editElasticForm.name}
+              onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, name: v }))}
+            />
+          </FormGroup>
+          <FormGroup label="Host" fieldId="edit-es-host" isRequired>
+            <TextInput
+              id="edit-es-host"
+              value={editElasticForm.host}
+              onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, host: v }))}
+            />
+          </FormGroup>
+          <FormGroup label="Port" fieldId="edit-es-port">
+            <TextInput
+              id="edit-es-port"
+              type="number"
+              value={editElasticForm.port}
+              onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, port: v }))}
+            />
+          </FormGroup>
+          <FormGroup label="Username" fieldId="edit-es-username">
+            <TextInput
+              id="edit-es-username"
+              value={editElasticForm.username}
+              onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, username: v }))}
+            />
+          </FormGroup>
+          <FormGroup label="Password" fieldId="edit-es-password">
+            {editingElasticConfig?.password && !showElasticPasswordEdit ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <span
+                  style={{
+                    fontFamily: "monospace",
+                    letterSpacing: "0.15em",
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                    pointerEvents: "none",
+                    color: "var(--pf-v5-global--Color--100)",
+                  }}
+                  aria-label="Password is set"
+                >
+                  ••••••••
+                </span>
+                <Button
+                  variant="link"
+                  isInline
+                  onClick={() => {
+                    setShowElasticPasswordEdit(true);
+                    setEditElasticForm((p) => ({ ...p, password: "" }));
+                  }}
+                >
+                  Change password
+                </Button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <TextInput
+                  id="edit-es-password"
+                  type="password"
+                  value={editElasticForm.password}
+                  placeholder="Enter new password"
+                  onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, password: v }))}
+                  style={{ flex: 1 }}
+                />
+                {editingElasticConfig?.password && (
+                  <Button
+                    variant="link"
+                    isInline
+                    onClick={() => {
+                      setShowElasticPasswordEdit(false);
+                      setEditElasticForm((p) => ({ ...p, password: "" }));
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            )}
+          </FormGroup>
+          <FormGroup label="Telemetry Index" fieldId="edit-es-telemetry-index">
+            <TextInput
+              id="edit-es-telemetry-index"
+              value={editElasticForm.telemetryIndex}
+              onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, telemetryIndex: v }))}
+            />
+          </FormGroup>
+          <FormGroup label="Metrics Index" fieldId="edit-es-metrics-index">
+            <TextInput
+              id="edit-es-metrics-index"
+              value={editElasticForm.metricsIndex}
+              onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, metricsIndex: v }))}
+            />
+          </FormGroup>
+          <FormGroup label="Alerts Index" fieldId="edit-es-alerts-index">
+            <TextInput
+              id="edit-es-alerts-index"
+              value={editElasticForm.alertsIndex}
+              onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, alertsIndex: v }))}
+            />
+          </FormGroup>
+          <FormGroup label="Grafana URL" fieldId="edit-es-grafana-url">
+            <TextInput
+              id="edit-es-grafana-url"
+              value={editElasticForm.grafanaUrl}
+              placeholder="Optional"
+              onChange={(_e, v) => setEditElasticForm((p) => ({ ...p, grafanaUrl: v }))}
+            />
+          </FormGroup>
+          <div className="settings-page__modal-actions">
+            <Button type="button" variant="link" onClick={closeEditElastic}>Cancel</Button>
+            <Button type="button" onClick={saveEditElastic}>Save changes</Button>
+          </div>
+        </Form>
       </Modal>
     </div>
   );

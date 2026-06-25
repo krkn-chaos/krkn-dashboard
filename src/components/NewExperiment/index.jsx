@@ -10,11 +10,16 @@ import {
   ExpandableSection,
   Form,
   FormGroup,
+  FormSelect,
+  FormSelectOption,
   Grid,
   GridItem,
+  HelperText,
+  HelperTextItem,
+  Spinner,
   TextInput,
-  Tooltip,
   Title,
+  Tooltip,
 } from "@patternfly/react-core";
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -26,28 +31,12 @@ import KubeconfigSelect from "@/components/molecules/KubeconfigSelect";
 import { TextButton } from "@/components/atoms/Buttons/Buttons";
 import API from "@/utils/axiosInstance";
 import { extractReplayBaseStem } from "@/utils/replayNaming";
-import { ExclamationTriangleIcon } from "@patternfly/react-icons";
-import { paramsList, globalParamsData } from "./experimentFormData";
+import { useScenarioFields } from "@/utils/useScenarioFields";
+import { ExclamationTriangleIcon, InfoCircleIcon } from "@patternfly/react-icons";
+import { SCENARIO_REGISTRY, globalParamsData } from "./experimentFormData";
 import { setActiveGroupId } from "@/actions/authActions";
 import { showToast } from "@/actions/toastActions";
 import { startKraken, updateScenarioChecked } from "@/actions/newExperiment";
-
-const mergeReplayScenarioFields = (stored, baseBlock) => {
-  const next = { ...baseBlock };
-  const skip = new Set(["replayOfContainerId", "isFileUpload", "name"]);
-  for (const [k, v] of Object.entries(stored)) {
-    if (skip.has(k)) continue;
-    if (
-      Object.prototype.hasOwnProperty.call(next, k) &&
-      v !== undefined &&
-      v !== null
-    ) {
-      next[k] = v;
-    }
-  }
-  next.scenarioChecked = stored.scenarioChecked;
-  return next;
-};
 
 const NewExperiment = () => {
   const dispatch = useDispatch();
@@ -60,149 +49,85 @@ const NewExperiment = () => {
   const [kubeconfigSelection, setKubeconfigSelection] = useState("");
   const [clusterRunWarning, setClusterRunWarning] = useState(null);
   const [pendingStartPayload, setPendingStartPayload] = useState(null);
-  const scenarioChecked = useSelector(
-    (state) => state.experiment.scenarioChecked
-  );
+
+  const scenarioChecked = useSelector((state) => state.experiment.scenarioChecked);
   const activeGroupId = useSelector((state) => state.auth.activeGroupId);
 
-  const [data, setData] = useState({
-    "pod-scenarios": {
-      kubeconfigPath: "",
-      namespace: "openshift-*",
-      pod_label: "",
-      name_pattern: ".*",
-      disruption_count: 1,
-      kill_timeout: 180,
-      expected_pod_count: "",
-      scenarioChecked: "pod-scenarios",
-      name: "",
-    },
-    "container-scenarios": {
-      kubeconfigPath: "",
-      namespace: "openshift-etcd",
-      label_selector: "k8s-app=etcd",
-      container_name: "etcd",
-      disruption_count: 1,
-      action: "kill 1",
-      expected_recovery_time: 60,
-      scenarioChecked: "container-scenarios",
-      name: "",
-    },
-    "node-cpu-hog": {
-      kubeconfigPath: "",
-      total_chaos_duration: 60,
-      node_cpu_core: 2,
-      node_cpu_percentage: 50,
-      namespace: "default",
-      node_selectors: "",
-      scenarioChecked: "node-cpu-hog",
-      name: "",
-    },
-    "node-io-hog": {
-      kubeconfigPath: "",
-      total_chaos_duration: 180,
-      io_block_size: "1m",
-      io_workers: 5,
-      io_write_bytes: "10m",
-      namespace: "default",
-      node_selectors: "",
-      scenarioChecked: "node-io-hog",
-      name: "",
-    },
-    "node-memory-hog": {
-      kubeconfigPath: "",
-      total_chaos_duration: 60,
-      memory_consumption_percentage: "90%",
-      number_of_workers: 1,
-      namespace: "default",
-      node_selectors: "",
-      scenarioChecked: "node-memory-hog",
-      name: "",
-    },
-    "node-scenarios": {
-      kubeconfigPath: "",
-      action: "node_stop_start_scenario",
-      cloud_type: "aws",
-      label_selector: "node-role.kubernetes.io/worker",
-      node_name: "",
-      instance_count: 1,
-      runs: 1,
-      timeout: 180,
-      duration: 120,
-      name: "",
-      scenarioChecked: "node-scenarios",
-    },
-    "pvc-scenarios": {
-      kubeconfigPath: "",
-      pvc_name: "",
-      pod_name: "",
-      namespace: "openshift-*",
-      fill_percentage: 50,
-      duration: 60,
-      block_size: 102400,
-      name: "",
-      scenarioChecked: "pvc-scenarios",
-    },
-    "time-scenarios": {
-      kubeconfigPath: "",
-      object_type: "pod",
-      label_selector: "k8s-app=etcd",
-      action: "skew_date",
-      object_name: "",
-      container_name: "",
-      namespace: "",
-      name: "",
-      scenarioChecked: "time-scenarios",
-    },
-    "kubevirt-outage": {
-      kubeconfigPath: "",
-      namespace: "default",
-      vm_name: "",
-      timeout: 60,
-      kill_count: 1,
-      name: "",
-      scenarioChecked: "kubevirt-outage",
-    },
-  });
+  const { fields: scenarioFields, loading: fieldsLoading, error: fieldsError } =
+    useScenarioFields(scenarioChecked);
+
+  const [data, setData] = useState({});
+
+  // Seed defaults from krkn-hub field definitions the first time a scenario loads.
+  useEffect(() => {
+    if (!scenarioFields || !scenarioChecked || data[scenarioChecked]) return;
+    const defaults = { scenarioChecked };
+    scenarioFields.forEach((f) => { defaults[f.key] = f.defaultValue ?? ""; });
+    setData((prev) => ({ ...prev, [scenarioChecked]: defaults }));
+  }, [scenarioFields, scenarioChecked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const initGlobalData = () => {
     const defaults = {};
     globalParamsData.forEach((cat) => {
-      cat.fields.forEach((field) => {
-        defaults[field.key] = field.defaultValue;
-      });
+      cat.fields.forEach((field) => { defaults[field.key] = field.defaultValue; });
     });
     return defaults;
   };
 
-  const [globalData, setGlobalData] = useState(initGlobalData());
-
+  const [globalData, setGlobalData] = useState(initGlobalData);
   const [globalSectionExpanded, setGlobalSectionExpanded] = useState(true);
-
   const [categoryExpanded, setCategoryExpanded] = useState(() =>
-    Object.fromEntries(
-      globalParamsData.map((c) => [c.category, c.defaultExpanded ?? false])
-    )
+    Object.fromEntries(globalParamsData.map((c) => [c.category, c.defaultExpanded ?? false]))
   );
+  const [esConfigs, setEsConfigs] = useState([]);
+  const [selectedEsConfigId, setSelectedEsConfigId] = useState("");
+  const [esPasswordMasked, setEsPasswordMasked] = useState(false);
 
-  const toggleCategory = (category) => {
-    setCategoryExpanded((prev) => ({ ...prev, [category]: !prev[category] }));
-  };
+  useEffect(() => {
+    API.get("/auth/elasticsearch-configs")
+      .then((r) => setEsConfigs(r.data.configs || []))
+      .catch(() => {});
+  }, []);
+  const [validationErrors, setValidationErrors] = useState({});
 
-  const globalChangeHandler = (_event, value, key) => {
-    setGlobalData((prevState) => ({
-      ...prevState,
-      [key]: value,
+  useEffect(() => { setValidationErrors({}); }, [scenarioChecked]);
+
+  const toggleCategory = (cat) =>
+    setCategoryExpanded((prev) => ({ ...prev, [cat]: !prev[cat] }));
+
+  const globalChangeHandler = (_e, value, key) =>
+    setGlobalData((prev) => ({ ...prev, [key]: value }));
+
+  const applyEsConfig = (configId) => {
+    setSelectedEsConfigId(configId);
+    if (!configId) {
+      setEsPasswordMasked(false);
+      setGlobalData((prev) => ({ ...prev, ENABLE_ES: "False" }));
+      return;
+    }
+    const cfg = esConfigs.find((c) => String(c.id) === String(configId));
+    if (!cfg) return;
+    setGlobalData((prev) => ({
+      ...prev,
+      ENABLE_ES: "True",
+      ES_SERVER: cfg.host ?? "",
+      ES_PORT: String(cfg.port ?? "9200"),
+      ES_USERNAME: cfg.username ?? "",
+      ES_PASSWORD: cfg.password ?? "",
+      ES_METRICS_INDEX: cfg.metrics_index ?? "",
+      ES_ALERTS_INDEX: cfg.alerts_index ?? "",
+      ES_TELEMETRY_INDEX: cfg.telemetry_index ?? "",
     }));
+    setEsPasswordMasked(!!cfg.password);
   };
 
+  // Replay flow
   useEffect(() => {
     if (replayAppliedRef.current) return;
     const replay = location.state?.replay;
     if (!replay?.params || !replay?.sourceContainerId) return;
 
-    const targetGroupId =
-      replay.groupId != null ? parseInt(replay.groupId, 10) : null;
+    const targetGroupId = replay.groupId != null ? parseInt(replay.groupId, 10) : null;
     if (targetGroupId && activeGroupId !== targetGroupId) {
       dispatch(setActiveGroupId(targetGroupId));
       setKubeconfigSelection("");
@@ -212,7 +137,7 @@ const NewExperiment = () => {
 
     const stored = replay.params;
     const scenario = stored.scenarioChecked;
-    if (!scenario || !paramsList[scenario]) {
+    if (!scenario || !SCENARIO_REGISTRY[scenario]) {
       replayAppliedRef.current = true;
       navigate(location.pathname, { replace: true, state: {} });
       return;
@@ -229,20 +154,19 @@ const NewExperiment = () => {
         const allocatedName = replayResponse?.name;
         if (!allocatedName) throw new Error("No name returned");
 
-        if (stored.globalParams) {
-          setGlobalData(stored.globalParams);
-        } else {
-          setGlobalData(initGlobalData());
-        }
+        setGlobalData(stored.globalParams ?? initGlobalData());
 
-        setData((prev) => ({
-          ...prev,
-          [scenario]: {
-            ...mergeReplayScenarioFields(stored, prev[scenario]),
-            name: allocatedName,
-            scenarioChecked: scenario,
-          },
-        }));
+        setData((prev) => {
+          const base = prev[scenario] ?? { scenarioChecked: scenario };
+          const skip = new Set(["replayOfContainerId", "isFileUpload", "name"]);
+          const merged = { ...base };
+          for (const [k, v] of Object.entries(stored)) {
+            if (skip.has(k) || v === undefined || v === null) continue;
+            merged[k] = v;
+          }
+          return { ...prev, [scenario]: { ...merged, name: allocatedName, scenarioChecked: scenario } };
+        });
+
         dispatch(updateScenarioChecked(scenario));
         setReplaySourceRunId(replay.sourceContainerId);
         setReplaySourceDisplayName(
@@ -252,58 +176,47 @@ const NewExperiment = () => {
         );
       } catch (err) {
         replayAppliedRef.current = false;
-        dispatch(
-          showToast(
-            "danger",
-            "Could not prepare replay",
-            err?.response?.data?.error ||
-              err?.message ||
-              "Unable to allocate a unique replay name."
-          )
-        );
+        dispatch(showToast("danger", "Could not prepare replay",
+          err?.response?.data?.error || err?.message || "Unable to allocate a unique replay name."));
       } finally {
         navigate(location.pathname, { replace: true, state: {} });
       }
     })();
   }, [location.state, location.pathname, navigate, dispatch, activeGroupId]);
 
+  // Button enable/disable
   useEffect(() => {
-    const scenarioData = data[scenarioChecked];
-    const scenarioParams = paramsList[scenarioChecked];
+    if (!scenarioFields || !data[scenarioChecked]) { setIsBtnDisabled(true); return; }
+    const allFilled = scenarioFields
+      .filter((f) => f.isRequired)
+      .every((f) => {
+        const v = data[scenarioChecked][f.key];
+        return v !== null && v !== undefined && String(v).trim() !== "";
+      });
+    setIsBtnDisabled(!allFilled || !activeGroupId);
+  }, [data, scenarioChecked, scenarioFields, activeGroupId]);
 
-    if (!scenarioParams) {
-      setIsBtnDisabled(true);
+  // Field change + validation
+  const changeHandler = (_e, value, key) => {
+    setData((prev) => ({ ...prev, [scenarioChecked]: { ...prev[scenarioChecked], [key]: value } }));
+    const field = scenarioFields?.find((f) => f.key === key);
+    if (!field) return;
+    if (!value || !String(value).trim()) {
+      setValidationErrors((prev) => ({ ...prev, [key]: false }));
       return;
     }
-    const requiredFieldKeys = scenarioParams
-      .filter((param) => param.isRequired)
-      .map((param) => param.key);
-
-    const allRequiredFilled = requiredFieldKeys.every((key) => {
-      const value = scenarioData[key];
-      return (
-        value !== null && value !== undefined && value.toString().trim() !== ""
-      );
-    });
-
-    setIsBtnDisabled(!allRequiredFilled || !activeGroupId);
-  }, [data, scenarioChecked, activeGroupId]);
-
-  const changeHandler = (_event, value, key) => {
-    setData((prevState) => ({
-      ...prevState,
-      [scenarioChecked]: {
-        ...prevState[scenarioChecked],
-        [key]: value,
-      },
-    }));
+    if (field.isNumeric) {
+      setValidationErrors((prev) => ({ ...prev, [key]: Number.isNaN(Number(value)) }));
+      return;
+    }
+    if (field.validator) {
+      setValidationErrors((prev) => ({ ...prev, [key]: !new RegExp(field.validator).test(value) }));
+    }
   };
 
   const buildStartPayload = () => {
     const base = { ...data[scenarioChecked] };
-    let payload = replaySourceRunId
-      ? { ...base, replayOfContainerId: replaySourceRunId }
-      : base;
+    let payload = replaySourceRunId ? { ...base, replayOfContainerId: replaySourceRunId } : base;
     if (kubeconfigSelection && kubeconfigSelection !== "legacy") {
       payload = { ...payload, kubeconfigId: parseInt(kubeconfigSelection, 10) };
     }
@@ -324,195 +237,181 @@ const NewExperiment = () => {
   const sendData = async () => {
     const payload = buildStartPayload();
     try {
-      const { data } = await API.post("/check-cluster-runs", { params: payload });
-      if ((data?.runningCount ?? 0) > 0) {
-        setClusterRunWarning({
-          runningCount: data.runningCount,
-          clusterKey: data.clusterKey,
-        });
+      const { data: clusterData } = await API.post("/check-cluster-runs", { params: payload });
+      if ((clusterData?.runningCount ?? 0) > 0) {
+        setClusterRunWarning({ runningCount: clusterData.runningCount, clusterKey: clusterData.clusterKey });
         setPendingStartPayload(payload);
         return;
       }
     } catch (e) {
-      dispatch(
-        showToast(
-          "danger",
-          "Could not verify cluster status",
-          e?.response?.data?.error || e?.message
-        )
-      );
+      dispatch(showToast("danger", "Could not verify cluster status", e?.response?.data?.error || e?.message));
       return;
     }
     await runStartKraken(payload);
   };
 
   const confirmClusterRun = async () => {
-    if (pendingStartPayload) {
-      await runStartKraken(pendingStartPayload);
-    }
+    if (pendingStartPayload) await runStartKraken(pendingStartPayload);
   };
+
+  const scenarioData = data[scenarioChecked] ?? {};
 
   return (
     <Card className="start-kraken-modal margin-top">
       <CardBody>
-        <Title headingLevel="h3" className="title-text">
-          Supported Parameters
-        </Title>
+        <Title headingLevel="h3" className="title-text">Supported Parameters</Title>
         <Form>
-          {/* <div>
-            <Switch
-              id="cerberus-switch"
-              label="Cerberus Enabled"
-              labelOff="Cerberus Disabled"
-            />
-          </div>*/}
-
           <Grid hasGutter>
-            {replaySourceRunId ? (
+            {/* Replay banner */}
+            {replaySourceRunId && (
               <GridItem span={12}>
-                <Alert
-                  isInline
-                  variant="info"
-                  title="Replayed from"
-                  actionClose={
-                    <AlertActionCloseButton
-                      onClose={() => {
-                        setReplaySourceRunId(null);
-                        setReplaySourceDisplayName("");
-                      }}
-                    />
-                  }
+                <Alert isInline variant="info" title="Replayed from"
+                  actionClose={<AlertActionCloseButton onClose={() => { setReplaySourceRunId(null); setReplaySourceDisplayName(""); }} />}
                 >
                   <div className="new-experiment__replay-alert-desc">
                     <div className="new-experiment__replay-alert-run-line">
-                      <Button
-                        variant="link"
-                        isInline
-                        className="new-experiment__replay-alert-run-link pf-v5-u-pl-0"
-                        component="a"
-                        href="/past-runs"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          navigate("/past-runs", {
-                            state: {
-                              focusContainerId: replaySourceRunId,
-                            },
-                          });
-                        }}
+                      <Button variant="link" isInline className="new-experiment__replay-alert-run-link pf-v5-u-pl-0"
+                        component="a" href="/past-runs"
+                        onClick={(e) => { e.preventDefault(); navigate("/past-runs", { state: { focusContainerId: replaySourceRunId } }); }}
                       >
-                        {replaySourceDisplayName || "Original"} —{" "}
-                        {replaySourceRunId}
+                        {replaySourceDisplayName || "Original"} — {replaySourceRunId}
                       </Button>
                     </div>
                     <span className="new-experiment__replay-alert-hint">
-                      Adjust parameters below or upload another kubeconfig file to
-                      target a different cluster.
+                      Adjust parameters below or upload another kubeconfig file to target a different cluster.
                     </span>
                   </div>
                 </Alert>
               </GridItem>
-            ) : null}
-            {clusterRunWarning ? (
+            )}
+
+            {/* Concurrent-run warning */}
+            {clusterRunWarning && (
               <GridItem span={12}>
-                <Alert
-                  variant="warning"
-                  isInline
-                  title="Other experiments are running on this cluster"
-                  actionClose={
-                    <AlertActionCloseButton
-                      onClose={() => {
-                        setClusterRunWarning(null);
-                        setPendingStartPayload(null);
-                      }}
-                    />
-                  }
+                <Alert variant="warning" isInline title="Other experiments are running on this cluster"
+                  actionClose={<AlertActionCloseButton onClose={() => { setClusterRunWarning(null); setPendingStartPayload(null); }} />}
                 >
                   <p>
                     There {clusterRunWarning.runningCount === 1 ? "is" : "are"}{" "}
                     <strong>{clusterRunWarning.runningCount}</strong> other
-                    experiment
-                    {clusterRunWarning.runningCount === 1 ? "" : "s"} currently
-                    running on this cluster
-                    {clusterRunWarning.clusterKey
-                      ? ` (${clusterRunWarning.clusterKey})`
-                      : ""}
-                    . Are you sure you want to continue?
+                    experiment{clusterRunWarning.runningCount === 1 ? "" : "s"}{" "}
+                    currently running on this cluster
+                    {clusterRunWarning.clusterKey ? ` (${clusterRunWarning.clusterKey})` : ""}.
+                    Are you sure you want to continue?
                   </p>
-                  <Button
-                    className="pf-v5-u-mt-sm"
-                    variant="primary"
-                    onClick={confirmClusterRun}
-                  >
+                  <Button className="pf-v5-u-mt-sm" variant="primary" onClick={confirmClusterRun}>
                     Yes, start Kraken anyway
                   </Button>
                 </Alert>
               </GridItem>
-            ) : null}
+            )}
+
+            {/* Kubeconfig selectors */}
             <GridItem span={12}>
               <Grid hasGutter>
                 <GridItem span={6}>
-                  <GroupSelect
-                    onGroupChange={() => {
-                      setKubeconfigSelection("");
-                      setClusterRunWarning(null);
-                      setPendingStartPayload(null);
-                    }}
-                  />
+                  <GroupSelect onGroupChange={() => { setKubeconfigSelection(""); setClusterRunWarning(null); setPendingStartPayload(null); }} />
                 </GridItem>
                 <GridItem span={6}>
-                  <KubeconfigSelect
-                    value={kubeconfigSelection}
-                    onChange={setKubeconfigSelection}
-                    allowLegacyUpload
-                  />
+                  <KubeconfigSelect value={kubeconfigSelection} onChange={setKubeconfigSelection} allowLegacyUpload />
                 </GridItem>
-                {kubeconfigSelection === "legacy" ? (
+                {kubeconfigSelection === "legacy" && (
                   <GridItem span={12}>
-                    <FormGroup isRequired={false} label={"KUBECONFIG FILE"}>
+                    <FormGroup isRequired={false} label="KUBECONFIG FILE">
                       <KubeconfigFileUpload />
                     </FormGroup>
                   </GridItem>
-                ) : null}
+                )}
               </Grid>
             </GridItem>
-            {scenarioChecked &&
-              paramsList[scenarioChecked].map((item, index) => {
-                return (
-                  <GridItem
-                    span={6}
-                    key={`${scenarioChecked}-${item.key}`}
-                    className="new-experiment__field-enter"
-                    style={{ animationDelay: `${index * 45}ms` }}
+
+            {/* Scenario fields */}
+            {scenarioChecked && fieldsLoading && (
+              <GridItem span={12} style={{ textAlign: "center", padding: "2rem" }}>
+                <Spinner size="lg" aria-label="Loading scenario parameters" />
+              </GridItem>
+            )}
+            {scenarioChecked && fieldsError && (
+              <GridItem span={12}>
+                <Alert variant="danger" isInline title="Could not load scenario parameters">
+                  {fieldsError?.response?.data?.error || fieldsError?.message}
+                </Alert>
+              </GridItem>
+            )}
+            {scenarioChecked && scenarioFields && !fieldsLoading &&
+              scenarioFields.map((item, index) => (
+                <GridItem span={6} key={`${scenarioChecked}-${item.key}`}
+                  className="new-experiment__field-enter"
+                  style={{ animationDelay: `${index * 45}ms` }}
+                >
+                  <FormGroup
+                    isRequired={item.isRequired}
+                    label={item.label}
+                    fieldId={item.fieldId}
+                    validated={validationErrors[item.key] ? "error" : "default"}
+                    labelIcon={
+                      <Tooltip
+                        content={
+                          <div>
+                            {item.helperText && <div>{item.helperText}</div>}
+                            {item.defaultValue && (
+                              <div style={{ marginTop: item.helperText ? "4px" : 0 }}>
+                                <strong>Default:</strong> {item.defaultValue}
+                              </div>
+                            )}
+                            {item.isRequired && (
+                              <div style={{ marginTop: "4px" }}><strong>Required</strong></div>
+                            )}
+                          </div>
+                        }
+                      >
+                        <InfoCircleIcon style={{ color: "var(--pf-v5-global--info-color--100)", cursor: "default", verticalAlign: "middle" }} />
+                      </Tooltip>
+                    }
                   >
-                    <FormGroup
-                      isRequired={item.isRequired}
-                      label={item.label}
-                      fieldId={item.fieldId}
-                      helperText={item.helperText}
-                    >
-                      <TextInput
-                        isRequired={item.isRequired}
-                        type="text"
+                    {item.inputType === "enum" ? (
+                      <FormSelect
                         id={item.fieldId}
                         name={item.key}
-                        value={data[scenarioChecked][item.key]}
+                        value={scenarioData[item.key] ?? item.defaultValue ?? ""}
+                        aria-label={item.label}
+                        onChange={(_e, val) => changeHandler(_e, val, item.key)}
+                      >
+                        {(item.allowedValues ?? []).map((opt) => (
+                          <FormSelectOption key={opt} value={opt} label={opt} />
+                        ))}
+                      </FormSelect>
+                    ) : (
+                      <TextInput
+                        isRequired={item.isRequired}
+                        type={item.inputType === "number" ? "number" : item.inputType || "text"}
+                        id={item.fieldId}
+                        name={item.key}
+                        value={scenarioData[item.key] ?? item.defaultValue ?? ""}
                         aria-describedby={item.ariaDescribedby}
-                        onChange={(evt, val) =>
-                          changeHandler(evt, val, item.key)
-                        }
+                        validated={validationErrors[item.key] ? "error" : "default"}
+                        onChange={(e, val) => changeHandler(e, val, item.key)}
                       />
-                    </FormGroup>
-                  </GridItem>
-                );
-              })}
+                    )}
+                    {validationErrors[item.key] && (item.validationMessage || item.isNumeric) && (
+                      <HelperText>
+                        <HelperTextItem variant="error" hasIcon>
+                          {item.isNumeric ? "Must be a valid number" : item.validationMessage}
+                        </HelperTextItem>
+                      </HelperText>
+                    )}
+                  </FormGroup>
+                </GridItem>
+              ))
+            }
 
-            {/* Global Scenario Variables Collapsible Section */}
+            {/* Global Scenario Variables */}
             <GridItem span={12} className="new-experiment__global-section-wrapper pf-v5-u-mt-md">
               <ExpandableSection
                 toggleText="Global Scenario Variables"
                 displaySize="large"
                 isExpanded={globalSectionExpanded}
-                onToggle={() => setGlobalSectionExpanded((prev) => !prev)}
+                onToggle={() => setGlobalSectionExpanded((p) => !p)}
               >
                 <Grid hasGutter className="pf-v5-u-mt-md">
                   {globalParamsData.map((category) => (
@@ -522,28 +421,78 @@ const NewExperiment = () => {
                         isExpanded={categoryExpanded[category.category]}
                         onToggle={() => toggleCategory(category.category)}
                       >
-                        <Grid hasGutter className="pf-v5-u-mt-md pf-v5-u-p-md" style={{ backgroundColor: "var(--pf-v5-global--BackgroundColor--light-100)", borderRadius: "4px" }}>
+                        <Grid hasGutter className="pf-v5-u-mt-md pf-v5-u-p-md"
+                          style={{ backgroundColor: "var(--pf-v5-global--BackgroundColor--light-100)", borderRadius: "4px" }}
+                        >
+                          {category.category === "Elastic" && esConfigs.length > 0 && (
+                            <GridItem span={12}>
+                              <FormGroup label="Load from saved config" fieldId="es-config-picker">
+                                <FormSelect
+                                  id="es-config-picker"
+                                  value={selectedEsConfigId}
+                                  onChange={(_e, v) => applyEsConfig(v)}
+                                >
+                                  <FormSelectOption value="" label="Select a saved Elasticsearch config…" />
+                                  {esConfigs.map((c) => (
+                                    <FormSelectOption
+                                      key={c.id}
+                                      value={String(c.id)}
+                                      label={`${c.name} — ${c.host}`}
+                                    />
+                                  ))}
+                                </FormSelect>
+                              </FormGroup>
+                            </GridItem>
+                          )}
                           {category.fields.map((field) => (
                             <GridItem span={6} key={field.key}>
                               <FormGroup
                                 label={field.label}
                                 fieldId={field.key}
                                 helperText={field.helperText}
-                                labelIcon={field.warning ? (
-                                  <Tooltip content={field.warning}>
-                                    <ExclamationTriangleIcon
-                                      style={{ color: "var(--pf-v5-global--warning-color--100)", cursor: "default", verticalAlign: "middle" }}
-                                    />
-                                  </Tooltip>
-                                ) : undefined}
+                                labelIcon={
+                                  field.warning ? (
+                                    <Tooltip content={field.warning}>
+                                      <ExclamationTriangleIcon style={{ color: "var(--pf-v5-global--warning-color--100)", cursor: "default", verticalAlign: "middle" }} />
+                                    </Tooltip>
+                                  ) : undefined
+                                }
                               >
-                                <TextInput
-                                  type="text"
-                                  id={field.key}
-                                  name={field.key}
-                                  value={globalData[field.key] ?? ""}
-                                  onChange={(evt, val) => globalChangeHandler(evt, val, field.key)}
-                                />
+                                {field.key === "ES_PASSWORD" && esPasswordMasked ? (
+                                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <span
+                                      style={{
+                                        fontFamily: "monospace",
+                                        letterSpacing: "0.15em",
+                                        userSelect: "none",
+                                        WebkitUserSelect: "none",
+                                        pointerEvents: "none",
+                                        color: "var(--pf-v5-global--Color--100)",
+                                      }}
+                                      aria-label="Password is set"
+                                    >
+                                      ••••••••
+                                    </span>
+                                    <Button
+                                      variant="link"
+                                      isInline
+                                      onClick={() => {
+                                        setEsPasswordMasked(false);
+                                        setGlobalData((prev) => ({ ...prev, ES_PASSWORD: "" }));
+                                      }}
+                                    >
+                                      Change password
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <TextInput
+                                    type={field.key === "ES_PASSWORD" ? "password" : "text"}
+                                    id={field.key}
+                                    name={field.key}
+                                    value={globalData[field.key] ?? ""}
+                                    onChange={(e, val) => globalChangeHandler(e, val, field.key)}
+                                  />
+                                )}
                               </FormGroup>
                             </GridItem>
                           ))}
@@ -555,13 +504,9 @@ const NewExperiment = () => {
               </ExpandableSection>
             </GridItem>
           </Grid>
+
           <ActionGroup className="action-group-wrapper">
-            <TextButton
-              variant="primary"
-              isBtnDisabled={isBtnDisabled}
-              clickHandler={sendData}
-              text={"Start Kraken"}
-            />
+            <TextButton variant="primary" isBtnDisabled={isBtnDisabled} clickHandler={sendData} text="Start Kraken" />
           </ActionGroup>
         </Form>
       </CardBody>
