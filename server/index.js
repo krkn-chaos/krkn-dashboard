@@ -1109,6 +1109,7 @@ app.post("/alertsAnalysis", async (req, res) => {
 });
 
 const server = app.listen(PORT, () => {
+  console.warn("WARNING: krkn-dashboard is deprecated and will be archived. Please migrate to krkn-operator: https://github.com/krkn-chaos/krkn-operator");
   console.log(`Server listening on ${PORT}`);
 });
 
