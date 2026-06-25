@@ -1,5 +1,8 @@
 # krkn-dashboard
 
+> [!WARNING]
+> **Deprecated.** krkn-dashboard is superseded by [krkn-operator-console](https://github.com/krkn-chaos/krkn-operator). This repository will be archived. Please migrate to [krkn-operator](https://github.com/krkn-chaos/krkn-operator).
+
 krkn Dashboard is the visualization component of [krkn-hub](https://github.com/redhat-chaos/krkn-hub/tree/main). It offers a set of user-friendly web interfaces through which users can manipulate and observe Chaos experiments.
 
 ## Prerequisites
